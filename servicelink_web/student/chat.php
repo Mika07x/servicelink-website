@@ -167,7 +167,7 @@ try {
                             <i class="fas fa-arrow-left me-1"></i>
                             Back to Requests
                         </a>
-                        <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-outline-primary">
+                        <a href="view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-outline-success">
                             <i class="fas fa-eye me-1"></i>
                             View Details
                         </a>
@@ -203,8 +203,8 @@ try {
                         <div class="col-md-4 text-end">
                             <?php if ($ticket['assigned_staff_name']): ?>
                                 <div class="d-flex align-items-center justify-content-end mb-2">
-                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
-                                        <i class="fas fa-user text-primary"></i>
+                                    <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 35px; height: 35px;">
+                                        <i class="fas fa-user text-success"></i>
                                     </div>
                                     <div class="text-start">
                                         <div class="fw-bold">Assigned to:</div>

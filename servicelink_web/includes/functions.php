@@ -13,10 +13,15 @@ function getUserDashboardStats($pdo, $user_id, $user_role, $department_id) {
             $stmt = $pdo->prepare("
                 SELECT 
                     COUNT(*) as total_tickets,
-                    SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+                    SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_tickets,
+                    SUM(CASE WHEN status IN ('new', 'pending') THEN 1 ELSE 0 END) as open_tickets,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tickets,
+                    SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned_tickets,
                     SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+                    SUM(CASE WHEN status = 'on_hold' THEN 1 ELSE 0 END) as on_hold_tickets,
                     SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
-                    SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets
+                    SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets,
+                    SUM(CASE WHEN status = 'reopen' THEN 1 ELSE 0 END) as reopen_tickets
                 FROM tickets 
                 WHERE requester_id = ?
             ");
@@ -35,10 +40,15 @@ function getUserDashboardStats($pdo, $user_id, $user_role, $department_id) {
             $stmt = $pdo->prepare("
                 SELECT 
                     COUNT(*) as total_tickets,
-                    SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+                    SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_tickets,
+                    SUM(CASE WHEN status IN ('new', 'pending') THEN 1 ELSE 0 END) as open_tickets,
+                    SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tickets,
+                    SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned_tickets,
                     SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+                    SUM(CASE WHEN status = 'on_hold' THEN 1 ELSE 0 END) as on_hold_tickets,
                     SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
                     SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets,
+                    SUM(CASE WHEN status = 'reopen' THEN 1 ELSE 0 END) as reopen_tickets,
                     SUM(CASE WHEN priority IN ('high', 'emergency') THEN 1 ELSE 0 END) as high_priority_tickets
                 FROM tickets 
                 $where_clause
@@ -58,10 +68,15 @@ function getUserDashboardStats($pdo, $user_id, $user_role, $department_id) {
         // Return default stats on error
         $stats = [
             'total_tickets' => 0,
+            'new_tickets' => 0,
             'open_tickets' => 0,
+            'pending_tickets' => 0,
+            'assigned_tickets' => 0,
             'in_progress_tickets' => 0,
+            'on_hold_tickets' => 0,
             'resolved_tickets' => 0,
             'closed_tickets' => 0,
+            'reopen_tickets' => 0,
             'high_priority_tickets' => 0,
             'assigned_tickets' => 0
         ];
@@ -147,15 +162,21 @@ function getPriorityColor($priority) {
  */
 function getStatusColor($status) {
     switch ($status) {
-        case 'open':
+        case 'new':
+            return 'info';
+        case 'pending':
+            return 'warning';
+        case 'assigned':
             return 'primary';
         case 'in_progress':
-            return 'warning';
+            return 'info';
+        case 'on_hold':
+            return 'secondary';
         case 'resolved':
             return 'success';
         case 'closed':
             return 'secondary';
-        case 'cancelled':
+        case 'reopen':
             return 'danger';
         default:
             return 'secondary';
@@ -398,11 +419,14 @@ function getPriorityOptions() {
  */
 function getStatusOptions() {
     return [
-        'open' => 'Open',
+        'new' => 'New',
+        'pending' => 'Pending',
+        'assigned' => 'Assigned',
         'in_progress' => 'In Progress',
+        'on_hold' => 'On Hold',
         'resolved' => 'Resolved',
         'closed' => 'Closed',
-        'cancelled' => 'Cancelled'
+        'reopen' => 'Reopen'
     ];
 }
 

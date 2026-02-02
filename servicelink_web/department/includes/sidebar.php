@@ -57,13 +57,13 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
 
             <!-- Pending Tickets -->
             <li class="nav-item">
-                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'open') ? 'active' : ''; ?>" href="tickets.php?status=open">
+                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'pending') ? 'active' : ''; ?>" href="tickets.php?status=pending">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     Pending Tickets
                     <?php
                     // Get pending tickets count for department
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND status = 'open'");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND status = 'pending'");
                         $stmt->execute([$_SESSION['department_id']]);
                         $count = $stmt->fetch()['count'];
                         if ($count > 0) echo '<span class="badge bg-warning ms-2">' . $count . '</span>';
@@ -80,7 +80,7 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                     <?php
                     // Get high priority tickets count for department
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'cancelled')");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'resolved')");
                         $stmt->execute([$_SESSION['department_id']]);
                         $count = $stmt->fetch()['count'];
                         if ($count > 0) echo '<span class="badge bg-danger ms-2">' . $count . '</span>';

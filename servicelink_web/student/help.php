@@ -38,7 +38,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'user') {
                             <i class="fas fa-plus me-1"></i>
                             New Request
                         </a>
-                        <a href="chat.php" class="btn btn-outline-primary">
+                        <a href="chat.php" class="btn btn-outline-success">
                             <i class="fas fa-comments me-1"></i>
                             Live Chat
                         </a>
@@ -72,7 +72,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'user') {
                             </div>
                             <h5 class="card-title">Live Chat Support</h5>
                             <p class="card-text">Get instant help through our real-time chat system. Connect with support staff immediately.</p>
-                            <a href="chat.php" class="btn btn-info">
+                            <a href="chat.php" class="btn btn-success">
                                 <i class="fas fa-comments me-1"></i>
                                 Start Chat
                             </a>
@@ -259,7 +259,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'user') {
                                     <p><strong>ServiceLink handles various university services for students:</strong></p>
                                     <div class="row">
                                         <div class="col-md-6">
-                                            <h6><i class="fas fa-laptop text-primary me-2"></i>IT Support</h6>
+                                            <h6><i class="fas fa-laptop text-success me-2"></i>IT Support</h6>
                                             <ul>
                                                 <li>Computer and laptop issues</li>
                                                 <li>Software installation and problems</li>

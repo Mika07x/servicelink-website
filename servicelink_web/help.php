@@ -101,12 +101,19 @@ $user_role = $_SESSION['user_role'];
                             <h5 class="card-title">Submit a Ticket</h5>
                             <p class="card-text">Need help with something? Create a service request ticket and our team will assist you.</p>
                             <?php if ($user_role == 'user'): ?>
-                                <a href="tickets/create.php" class="btn btn-success">
+                                <a href="student/create.php" class="btn btn-success">
                                     <i class="fas fa-plus me-1"></i>
                                     Create Ticket
                                 </a>
                             <?php else: ?>
-                                <a href="tickets/" class="btn btn-success">
+                                <a href="<?php 
+                                switch ($user_role) {
+                                    case 'admin': echo 'admin/tickets.php'; break;
+                                    case 'department_admin': echo 'department/tickets.php'; break;
+                                    case 'staff': echo 'staff/tickets.php'; break;
+                                    default: echo 'student/tickets.php'; break;
+                                }
+                                ?>" class="btn btn-success">
                                     <i class="fas fa-list me-1"></i>
                                     View Tickets
                                 </a>
@@ -124,11 +131,11 @@ $user_role = $_SESSION['user_role'];
                             <h5 class="card-title">Contact Support</h5>
                             <p class="card-text">Need immediate assistance? Contact our support team directly.</p>
                             <div class="d-grid gap-2">
-                                <a href="tel:+1234567890" class="btn btn-outline-info">
+                                <a href="tel:+1234567890" class="btn btn-outline-success">
                                     <i class="fas fa-phone me-1"></i>
                                     Call: (123) 456-7890
                                 </a>
-                                <a href="mailto:support@university.edu" class="btn btn-outline-info">
+                                <a href="mailto:support@university.edu" class="btn btn-outline-success">
                                     <i class="fas fa-envelope me-1"></i>
                                     Email Support
                                 </a>

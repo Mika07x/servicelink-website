@@ -111,41 +111,69 @@ if ($current_dir == 'admin' || $current_dir == 'department' || $current_dir == '
             <?php if ($_SESSION['user_role'] == 'user'): ?>
                 <!-- User Menu Items -->
                 <li class="nav-item">
-                    <a class="nav-link <?php echo ($current_page == 'create.php' && $current_dir == 'tickets') ? 'active' : ''; ?>" 
-                       href="<?php echo ($current_dir == 'tickets') ? 'create.php' : $base_path . 'tickets/create.php'; ?>">
+                    <a class="nav-link <?php echo ($current_page == 'create.php') ? 'active' : ''; ?>" 
+                       href="<?php 
+                       switch ($_SESSION['user_role']) {
+                           case 'user':
+                           default:
+                               echo ($current_dir == 'student') ? 'create.php' : 'student/create.php';
+                               break;
+                       }
+                       ?>">
                         <i class="fas fa-plus me-2"></i>
                         New Request
                     </a>
                 </li>
                 
                 <li class="nav-item">
-                    <a class="nav-link <?php echo (($current_page == 'index.php' && $current_dir == 'tickets' && isset($_GET['status']) && $_GET['status'] == 'open') || ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'open')) ? 'active' : ''; ?>" 
-                       href="<?php echo ($current_dir == 'tickets') ? 'index.php?status=open' : $base_path . 'tickets/index.php?status=open'; ?>">
-                        <i class="fas fa-clock me-2"></i>
-                        Open Tickets
+                    <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'new') ? 'active' : ''; ?>" 
+                       href="<?php 
+                       switch ($_SESSION['user_role']) {
+                           case 'user':
+                           default:
+                               echo ($current_dir == 'student') ? 'tickets.php?status=new' : 'student/tickets.php?status=new';
+                               break;
+                       }
+                       ?>">
+                        <i class="fas fa-plus-circle me-2"></i>
+                        New Tickets
                         <?php
-                        // Get open tickets count
+                        // Get new tickets count
                         try {
-                            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND status = 'open'");
+                            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND status = 'new'");
                             $stmt->execute([$_SESSION['user_id']]);
                             $count = $stmt->fetch()['count'];
-                            if ($count > 0) echo '<span class="badge bg-warning ms-2">' . $count . '</span>';
+                            if ($count > 0) echo '<span class="badge bg-info ms-2">' . $count . '</span>';
                         } catch (PDOException $e) {}
                         ?>
                     </a>
                 </li>
                 
                 <li class="nav-item">
-                    <a class="nav-link <?php echo (($current_page == 'index.php' && $current_dir == 'tickets' && isset($_GET['status']) && $_GET['status'] == 'in_progress') || ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'in_progress')) ? 'active' : ''; ?>" 
-                       href="<?php echo ($current_dir == 'tickets') ? 'index.php?status=in_progress' : $base_path . 'tickets/index.php?status=in_progress'; ?>">
+                    <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'in_progress') ? 'active' : ''; ?>" 
+                       href="<?php 
+                       switch ($_SESSION['user_role']) {
+                           case 'user':
+                           default:
+                               echo ($current_dir == 'student') ? 'tickets.php?status=in_progress' : 'student/tickets.php?status=in_progress';
+                               break;
+                       }
+                       ?>">
                         <i class="fas fa-cog me-2"></i>
                         In Progress
                     </a>
                 </li>
                 
                 <li class="nav-item">
-                    <a class="nav-link <?php echo (($current_page == 'index.php' && $current_dir == 'tickets' && isset($_GET['status']) && $_GET['status'] == 'resolved') || ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'resolved')) ? 'active' : ''; ?>" 
-                       href="<?php echo ($current_dir == 'tickets') ? 'index.php?status=resolved' : $base_path . 'tickets/index.php?status=resolved'; ?>">
+                    <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'resolved') ? 'active' : ''; ?>" 
+                       href="<?php 
+                       switch ($_SESSION['user_role']) {
+                           case 'user':
+                           default:
+                               echo ($current_dir == 'student') ? 'tickets.php?status=resolved' : 'student/tickets.php?status=resolved';
+                               break;
+                       }
+                       ?>">
                         <i class="fas fa-check-circle me-2"></i>
                         Resolved
                     </a>
@@ -155,23 +183,23 @@ if ($current_dir == 'admin' || $current_dir == 'department' || $current_dir == '
                 <!-- Staff/Admin Menu Items -->
                 <li class="nav-item">
                     <a class="nav-link <?php 
-                        // Check for pending tickets (status=open)
+                        // Check for pending tickets (status=pending)
                         $is_pending = false;
                         if ($_SESSION['user_role'] != 'user') {
-                            $is_pending = ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'open');
+                            $is_pending = ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'pending');
                         }
                         echo $is_pending ? 'active' : ''; 
                     ?>" 
                        href="<?php 
                        switch ($_SESSION['user_role']) {
                            case 'admin':
-                               echo ($current_dir == 'admin') ? 'tickets.php?status=open' : 'admin/tickets.php?status=open';
+                               echo ($current_dir == 'admin') ? 'tickets.php?status=pending' : 'admin/tickets.php?status=pending';
                                break;
                            case 'department_admin':
-                               echo ($current_dir == 'department') ? 'tickets.php?status=open' : 'department/tickets.php?status=open';
+                               echo ($current_dir == 'department') ? 'tickets.php?status=pending' : 'department/tickets.php?status=pending';
                                break;
                            case 'staff':
-                               echo ($current_dir == 'staff') ? 'tickets.php?status=open' : 'staff/tickets.php?status=open';
+                               echo ($current_dir == 'staff') ? 'tickets.php?status=pending' : 'staff/tickets.php?status=pending';
                                break;
                        }
                        ?>">
@@ -181,10 +209,10 @@ if ($current_dir == 'admin' || $current_dir == 'department' || $current_dir == '
                         // Get pending tickets count for department/all
                         try {
                             if ($_SESSION['user_role'] == 'admin') {
-                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE status = 'open'");
+                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE status = 'pending'");
                                 $stmt->execute();
                             } else {
-                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND status = 'open'");
+                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND status = 'pending'");
                                 $stmt->execute([$_SESSION['department_id']]);
                             }
                             $count = $stmt->fetch()['count'];
@@ -210,7 +238,7 @@ if ($current_dir == 'admin' || $current_dir == 'department' || $current_dir == '
                         <?php
                         // Get assigned tickets count
                         try {
-                            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE assigned_to = ? AND status IN ('open', 'in_progress')");
+                            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE assigned_to = ? AND status IN ('assigned', 'in_progress')");
                             $stmt->execute([$_SESSION['user_id']]);
                             $count = $stmt->fetch()['count'];
                             if ($count > 0) echo '<span class="badge bg-info ms-2">' . $count . '</span>';
@@ -249,10 +277,10 @@ if ($current_dir == 'admin' || $current_dir == 'department' || $current_dir == '
                         // Get high priority tickets count
                         try {
                             if ($_SESSION['user_role'] == 'admin') {
-                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE priority IN ('high', 'emergency') AND status NOT IN ('closed', 'cancelled')");
+                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE priority IN ('high', 'emergency') AND status NOT IN ('closed', 'resolved')");
                                 $stmt->execute();
                             } else {
-                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'cancelled')");
+                                $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'resolved')");
                                 $stmt->execute([$_SESSION['department_id']]);
                             }
                             $count = $stmt->fetch()['count'];

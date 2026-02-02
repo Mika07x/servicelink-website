@@ -232,7 +232,7 @@ try {
                                                     <small class="text-muted"><?php echo date('M j, Y', strtotime($ticket['created_at'])); ?></small>
                                                 </td>
                                                 <td>
-                                                    <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-sm btn-outline-primary">
+                                                    <a href="view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-sm btn-outline-primary">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                 </td>

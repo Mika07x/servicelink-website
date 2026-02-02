@@ -13,6 +13,8 @@ $user_id = $_SESSION['user_id'];
 
 // Get user's recent tickets for chat selection
 $recent_tickets = [];
+$available_staff = [];
+
 try {
     $stmt = $pdo->prepare("
         SELECT t.*, sc.name as category_name, d.name as department_name,
@@ -27,8 +29,19 @@ try {
     ");
     $stmt->execute([$user_id]);
     $recent_tickets = $stmt->fetchAll();
+    
+    // Get available staff and admins for chat
+    $stmt = $pdo->query("
+        SELECT u.id, u.first_name, u.last_name, u.role, d.name as department_name
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        WHERE u.role IN ('admin', 'department_admin', 'staff') AND u.is_active = 1
+        ORDER BY u.role, d.name, u.first_name
+    ");
+    $available_staff = $stmt->fetchAll();
 } catch (PDOException $e) {
     $recent_tickets = [];
+    $available_staff = [];
 }
 
 // Handle new general support message
@@ -38,23 +51,43 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['general_message'])) {
     $general_message = trim($_POST['general_message']);
     $subject = trim($_POST['subject']);
+    $chat_type = $_POST['chat_type'] ?? 'general';
+    $selected_staff = $_POST['selected_staff'] ?? null;
+    $selected_ticket = $_POST['selected_ticket'] ?? null;
     
     if (!empty($general_message) && !empty($subject)) {
         try {
-            // Create a general support ticket
-            $ticket_number = 'REQ-' . date('Y') . '-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
-            
-            $stmt = $pdo->prepare("
-                INSERT INTO tickets (ticket_number, title, description, requester_id, priority, status, created_at) 
-                VALUES (?, ?, ?, ?, 'medium', 'open', NOW())
-            ");
-            $stmt->execute([$ticket_number, $subject, $general_message, $user_id]);
-            
-            $new_ticket_id = $pdo->lastInsertId();
-            
-            // Redirect to chat with the new ticket
-            header("Location: chat.php?ticket_id=$new_ticket_id");
-            exit;
+            if ($chat_type === 'ticket' && $selected_ticket) {
+                // Continue chat for existing ticket
+                header("Location: chat.php?ticket_id=$selected_ticket");
+                exit;
+            } elseif ($chat_type === 'staff' && $selected_staff) {
+                // Create a direct chat with selected staff
+                $ticket_number = 'CHAT-' . date('Y') . '-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
+                
+                $stmt = $pdo->prepare("
+                    INSERT INTO tickets (ticket_number, title, description, requester_id, assigned_to, priority, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, 'medium', 'open', NOW())
+                ");
+                $stmt->execute([$ticket_number, $subject, $general_message, $user_id, $selected_staff]);
+                
+                $new_ticket_id = $pdo->lastInsertId();
+                header("Location: chat.php?ticket_id=$new_ticket_id");
+                exit;
+            } else {
+                // Create a general support ticket
+                $ticket_number = 'REQ-' . date('Y') . '-' . str_pad(rand(1, 99999), 5, '0', STR_PAD_LEFT);
+                
+                $stmt = $pdo->prepare("
+                    INSERT INTO tickets (ticket_number, title, description, requester_id, priority, status, created_at) 
+                    VALUES (?, ?, ?, ?, 'medium', 'open', NOW())
+                ");
+                $stmt->execute([$ticket_number, $subject, $general_message, $user_id]);
+                
+                $new_ticket_id = $pdo->lastInsertId();
+                header("Location: chat.php?ticket_id=$new_ticket_id");
+                exit;
+            }
         } catch (PDOException $e) {
             $error = "Error creating support request: " . $e->getMessage();
         }
@@ -93,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['general_message'])) {
                             <i class="fas fa-plus me-1"></i>
                             New Request
                         </a>
-                        <a href="tickets.php" class="btn btn-outline-primary">
+                        <a href="tickets.php" class="btn btn-outline-success">
                             <i class="fas fa-list me-1"></i>
                             My Requests
                         </a>
@@ -131,6 +164,86 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['general_message'])) {
                         </div>
                         <div class="card-body">
                             <form method="POST">
+                                <!-- Chat Type Selection -->
+                                <div class="mb-3">
+                                    <label class="form-label">Chat Type</label>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="chat_type" id="general_chat" value="general" checked>
+                                                <label class="form-check-label" for="general_chat">
+                                                    <i class="fas fa-comments text-info me-1"></i>
+                                                    General Support
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="chat_type" id="staff_chat" value="staff">
+                                                <label class="form-check-label" for="staff_chat">
+                                                    <i class="fas fa-user-tie text-success me-1"></i>
+                                                    Specific Staff
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="chat_type" id="ticket_chat" value="ticket">
+                                                <label class="form-check-label" for="ticket_chat">
+                                                    <i class="fas fa-ticket-alt text-success me-1"></i>
+                                                    Existing Ticket
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Staff Selection (hidden by default) -->
+                                <div class="mb-3" id="staff_selection" style="display: none;">
+                                    <label for="selected_staff" class="form-label">Select Staff Member</label>
+                                    <select class="form-select" name="selected_staff" id="selected_staff">
+                                        <option value="">Choose a staff member...</option>
+                                        <?php
+                                        $current_role = '';
+                                        foreach ($available_staff as $staff):
+                                            $role_label = '';
+                                            switch($staff['role']) {
+                                                case 'admin': $role_label = 'Administrator'; break;
+                                                case 'department_admin': $role_label = 'Department Head'; break;
+                                                case 'staff': $role_label = 'Staff'; break;
+                                            }
+                                            
+                                            if ($staff['role'] != $current_role) {
+                                                if ($current_role != '') echo '</optgroup>';
+                                                echo '<optgroup label="' . $role_label . '">';
+                                                $current_role = $staff['role'];
+                                            }
+                                        ?>
+                                            <option value="<?php echo $staff['id']; ?>">
+                                                <?php echo htmlspecialchars($staff['first_name'] . ' ' . $staff['last_name']); ?>
+                                                <?php if ($staff['department_name']): ?>
+                                                    - <?php echo htmlspecialchars($staff['department_name']); ?>
+                                                <?php endif; ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                        <?php if ($current_role != '') echo '</optgroup>'; ?>
+                                    </select>
+                                </div>
+
+                                <!-- Ticket Selection (hidden by default) -->
+                                <div class="mb-3" id="ticket_selection" style="display: none;">
+                                    <label for="selected_ticket" class="form-label">Select Existing Ticket</label>
+                                    <select class="form-select" name="selected_ticket" id="selected_ticket">
+                                        <option value="">Choose a ticket...</option>
+                                        <?php foreach ($recent_tickets as $ticket): ?>
+                                            <option value="<?php echo $ticket['id']; ?>">
+                                                #<?php echo htmlspecialchars($ticket['ticket_number']); ?> - 
+                                                <?php echo htmlspecialchars($ticket['title']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+
                                 <div class="mb-3">
                                     <label for="subject" class="form-label">Subject</label>
                                     <input type="text" class="form-control" id="subject" name="subject" 
@@ -202,8 +315,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['general_message'])) {
                                             <td>
                                                 <?php if ($ticket['assigned_staff_name']): ?>
                                                     <div class="d-flex align-items-center">
-                                                        <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 25px; height: 25px;">
-                                                            <i class="fas fa-user text-primary" style="font-size: 10px;"></i>
+                                                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 25px; height: 25px;">
+                                                            <i class="fas fa-user text-success" style="font-size: 10px;"></i>
                                                         </div>
                                                         <small><?php echo htmlspecialchars($ticket['assigned_staff_name']); ?></small>
                                                     </div>
@@ -372,6 +485,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['general_message'])) {
         document.getElementById('general_message').addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = this.scrollHeight + 'px';
+        });
+
+        // Handle chat type selection
+        document.querySelectorAll('input[name="chat_type"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const staffSelection = document.getElementById('staff_selection');
+                const ticketSelection = document.getElementById('ticket_selection');
+                const selectedStaff = document.getElementById('selected_staff');
+                const selectedTicket = document.getElementById('selected_ticket');
+                
+                // Hide all selections first
+                staffSelection.style.display = 'none';
+                ticketSelection.style.display = 'none';
+                selectedStaff.required = false;
+                selectedTicket.required = false;
+                
+                // Show relevant selection based on choice
+                if (this.value === 'staff') {
+                    staffSelection.style.display = 'block';
+                    selectedStaff.required = true;
+                } else if (this.value === 'ticket') {
+                    ticketSelection.style.display = 'block';
+                    selectedTicket.required = true;
+                }
+            });
         });
     </script>
 </body>

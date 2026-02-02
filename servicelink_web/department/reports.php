@@ -52,10 +52,15 @@ try {
     $stmt = $pdo->prepare("
         SELECT 
             COUNT(*) as total_tickets,
-            SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+            SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_tickets,
+            SUM(CASE WHEN status IN ('new', 'pending') THEN 1 ELSE 0 END) as open_tickets,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tickets,
+            SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned_tickets,
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+            SUM(CASE WHEN status = 'on_hold' THEN 1 ELSE 0 END) as on_hold_tickets,
             SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
             SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets,
+            SUM(CASE WHEN status = 'reopen' THEN 1 ELSE 0 END) as reopen_tickets,
             SUM(CASE WHEN priority = 'emergency' THEN 1 ELSE 0 END) as emergency_tickets,
             SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) as high_priority_tickets,
             AVG(CASE WHEN resolved_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, created_at, resolved_at) END) as avg_resolution_time
@@ -450,7 +455,7 @@ try {
                                             <?php foreach ($recent_tickets as $ticket): ?>
                                                 <tr>
                                                     <td>
-                                                        <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" class="text-decoration-none">
+                                                        <a href="view.php?id=<?php echo $ticket['id']; ?>" class="text-decoration-none">
                                                             <?php echo htmlspecialchars($ticket['ticket_number']); ?>
                                                         </a>
                                                     </td>

@@ -161,10 +161,14 @@ $tickets = $stmt->fetchAll();
                                 <label for="status" class="form-label">Status</label>
                                 <select class="form-select" id="status" name="status">
                                     <option value="">All Status</option>
-                                    <option value="open" <?php echo ($status_filter == 'open') ? 'selected' : ''; ?>>Open</option>
+                                    <option value="new" <?php echo ($status_filter == 'new') ? 'selected' : ''; ?>>New</option>
+                                    <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="assigned" <?php echo ($status_filter == 'assigned') ? 'selected' : ''; ?>>Assigned</option>
                                     <option value="in_progress" <?php echo ($status_filter == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
+                                    <option value="on_hold" <?php echo ($status_filter == 'on_hold') ? 'selected' : ''; ?>>On Hold</option>
                                     <option value="resolved" <?php echo ($status_filter == 'resolved') ? 'selected' : ''; ?>>Resolved</option>
                                     <option value="closed" <?php echo ($status_filter == 'closed') ? 'selected' : ''; ?>>Closed</option>
+                                    <option value="reopen" <?php echo ($status_filter == 'reopen') ? 'selected' : ''; ?>>Reopen</option>
                                 </select>
                             </div>
                             
@@ -315,7 +319,7 @@ $tickets = $stmt->fetchAll();
                                                         </a>
                                                         <?php if ($user_role != 'user' && $ticket['status'] != 'closed'): ?>
                                                             <a href="edit.php?id=<?php echo $ticket['id']; ?>" 
-                                                               class="btn btn-outline-primary" title="Edit">
+                                                               class="btn btn-outline-success" title="Edit">
                                                                 <i class="fas fa-edit"></i>
                                                             </a>
                                                         <?php endif; ?>

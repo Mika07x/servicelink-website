@@ -96,11 +96,11 @@ try {
                 </h1>
                 <div class="btn-toolbar mb-2 mb-md-0">
                     <div class="btn-group me-2">
-                        <a href="../tickets/create.php" class="btn btn-success">
+                        <a href="create.php" class="btn btn-success">
                             <i class="fas fa-plus me-1"></i>
                             New Request
                         </a>
-                        <a href="reports.php" class="btn btn-outline-primary">
+                        <a href="reports.php" class="btn btn-outline-success">
                             <i class="fas fa-print me-1"></i>
                             Print Report
                         </a>
@@ -123,10 +123,14 @@ try {
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">All Status</option>
-                                <option value="open" <?php echo ($status_filter == 'open') ? 'selected' : ''; ?>>Open</option>
+                                <option value="new" <?php echo ($status_filter == 'new') ? 'selected' : ''; ?>>New</option>
+                                <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                <option value="assigned" <?php echo ($status_filter == 'assigned') ? 'selected' : ''; ?>>Assigned</option>
                                 <option value="in_progress" <?php echo ($status_filter == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
+                                <option value="on_hold" <?php echo ($status_filter == 'on_hold') ? 'selected' : ''; ?>>On Hold</option>
                                 <option value="resolved" <?php echo ($status_filter == 'resolved') ? 'selected' : ''; ?>>Resolved</option>
                                 <option value="closed" <?php echo ($status_filter == 'closed') ? 'selected' : ''; ?>>Closed</option>
+                                <option value="reopen" <?php echo ($status_filter == 'reopen') ? 'selected' : ''; ?>>Reopen</option>
                             </select>
                         </div>
                         
@@ -190,7 +194,7 @@ try {
                                                     No service requests found matching your search criteria.
                                                     <br><a href="tickets.php" class="text-decoration-none">Clear filters</a> to see all requests.
                                                 <?php else: ?>
-                                                    No service requests yet. <a href="../tickets/create.php" class="text-decoration-none">Create your first request</a>!
+                                                    No service requests yet. <a href="create.php" class="text-decoration-none">Create your first request</a>!
                                                 <?php endif; ?>
                                             </p>
                                         </td>
@@ -240,8 +244,8 @@ try {
                                         <td>
                                             <?php if ($ticket['assigned_staff_name']): ?>
                                                 <div class="d-flex align-items-center">
-                                                    <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 25px; height: 25px;">
-                                                        <i class="fas fa-user text-primary" style="font-size: 10px;"></i>
+                                                    <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 25px; height: 25px;">
+                                                        <i class="fas fa-user text-success" style="font-size: 10px;"></i>
                                                     </div>
                                                     <small><?php echo htmlspecialchars($ticket['assigned_staff_name']); ?></small>
                                                 </div>
@@ -256,7 +260,7 @@ try {
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm">
-                                                <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-outline-primary" title="View Details">
+                                                <a href="view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-outline-success" title="View Details">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 <a href="chat.php?ticket_id=<?php echo $ticket['id']; ?>" class="btn btn-outline-success" title="Chat">

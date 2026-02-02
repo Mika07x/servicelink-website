@@ -96,7 +96,7 @@ $notifications = getUnreadNotifications($pdo, $user_id, 5);
                     </h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <div class="btn-group me-2">
-                            <a href="../tickets/" class="btn btn-success">
+                            <a href="tickets.php" class="btn btn-success">
                                 <i class="fas fa-tasks me-1"></i>
                                 Department Tickets
                             </a>
@@ -265,7 +265,7 @@ $notifications = getUnreadNotifications($pdo, $user_id, 5);
                                                             </small>
                                                         </td>
                                                         <td>
-                                                            <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" 
+                                                            <a href="view.php?id=<?php echo $ticket['id']; ?>" 
                                                                class="btn btn-sm btn-outline-success">
                                                                 <i class="fas fa-eye"></i>
                                                             </a>
@@ -276,7 +276,7 @@ $notifications = getUnreadNotifications($pdo, $user_id, 5);
                                         </table>
                                     </div>
                                     <div class="text-center mt-3">
-                                        <a href="../tickets/" class="btn btn-outline-success">
+                                        <a href="tickets.php" class="btn btn-outline-success">
                                             View All Department Tickets
                                         </a>
                                     </div>
@@ -350,7 +350,7 @@ $notifications = getUnreadNotifications($pdo, $user_id, 5);
                                         </a>
                                     </div>
                                     <div class="col-md-3 mb-3">
-                                        <a href="../tickets/?status=open" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center">
+                                        <a href="tickets.php?status=open" class="btn btn-outline-warning w-100 h-100 d-flex flex-column align-items-center justify-content-center">
                                             <i class="fas fa-clock fa-2x mb-2"></i>
                                             <span>Open Tickets</span>
                                         </a>

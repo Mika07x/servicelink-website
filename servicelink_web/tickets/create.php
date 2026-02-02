@@ -1,141 +1,150 @@
 <?php
-require_once '../config/session.php'; // Include session config FIRST
+require_once '../config/session.php';
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 
-// Check if user is logged in and is a regular user
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'user') {
+// Check if user is logged in
+if (!isset($_SESSION['user_id'])) {
     header('Location: ../login.php');
     exit;
 }
 
+// Only students can create tickets
+if ($_SESSION['user_role'] != 'user') {
+    header('Location: ../dashboard.php');
+    exit;
+}
+
 $user_id = $_SESSION['user_id'];
-$error = '';
-$success = '';
+$user_role = $_SESSION['user_role'];
 
-// Get departments and categories
+// Get user's campus for location filtering
+$user_campus_id = $_SESSION['campus_id'] ?? null;
+
+// Get departments for categorization
 $departments = [];
-$categories = [];
-
 try {
     $stmt = $pdo->query("SELECT id, name FROM departments WHERE is_active = 1 ORDER BY name");
     $departments = $stmt->fetchAll();
-    
-    $stmt = $pdo->query("SELECT id, name, department_id FROM service_categories WHERE is_active = 1 ORDER BY name");
-    $categories = $stmt->fetchAll();
 } catch (PDOException $e) {
-    $error = 'Failed to load form data.';
+    $departments = [];
 }
 
+// Get locations for user's campus
+$locations = [];
+if ($user_campus_id) {
+    try {
+        $stmt = $pdo->prepare("SELECT id, name, building, floor, room FROM locations WHERE campus_id = ? AND is_active = 1 ORDER BY name");
+        $stmt->execute([$user_campus_id]);
+        $locations = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        $locations = [];
+    }
+}
+
+// Handle form submission
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $title = trim($_POST['title']);
     $description = trim($_POST['description']);
-    $category_id = $_POST['category_id'];
-    $urgency = $_POST['urgency'] ?? 'medium';
+    $category_id = $_POST['category_id'] ?: null;
+    $subcategory_id = $_POST['subcategory_id'] ?: null;
+    $location_id = $_POST['location_id'] ?: null;
+    $department_id = $_POST['department_id'] ?: null;
     
-    // Validation
-    if (empty($title) || empty($description) || empty($category_id)) {
-        $error = 'Please fill in all required fields.';
-    } else {
+    if (!empty($title) && !empty($description)) {
         try {
             // Generate unique ticket number
             $ticket_number = generateTicketNumber($pdo);
             
-            // Get category department
-            $stmt = $pdo->prepare("SELECT department_id FROM service_categories WHERE id = ?");
-            $stmt->execute([$category_id]);
-            $category = $stmt->fetch();
-            $department_id = $category['department_id'];
+            // Determine priority automatically (AI-like logic)
+            $priority = 'medium'; // Default
+            $title_lower = strtolower($title);
+            $desc_lower = strtolower($description);
             
-            // AI Analysis would go here - for now, we'll use the urgency as priority
-            $priority_map = [
-                'low' => 'low',
-                'medium' => 'medium', 
-                'high' => 'high',
-                'urgent' => 'emergency'
-            ];
-            $priority = $priority_map[$urgency] ?? 'medium';
+            if (strpos($title_lower, 'urgent') !== false || strpos($desc_lower, 'urgent') !== false ||
+                strpos($title_lower, 'emergency') !== false || strpos($desc_lower, 'emergency') !== false) {
+                $priority = 'emergency';
+            } elseif (strpos($title_lower, 'important') !== false || strpos($desc_lower, 'important') !== false ||
+                     strpos($title_lower, 'asap') !== false || strpos($desc_lower, 'asap') !== false) {
+                $priority = 'high';
+            } elseif (strpos($title_lower, 'minor') !== false || strpos($desc_lower, 'minor') !== false ||
+                     strpos($title_lower, 'small') !== false || strpos($desc_lower, 'small') !== false) {
+                $priority = 'low';
+            }
             
-            // Create ticket
+            // Insert ticket
             $stmt = $pdo->prepare("
-                INSERT INTO tickets (ticket_number, title, description, category_id, priority, 
-                                   requester_id, department_id, ai_analysis) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO tickets (ticket_number, title, description, category_id, subcategory_id, location_id, 
+                                   priority, status, requester_id, department_id, created_at) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'new', ?, ?, NOW())
             ");
+            $stmt->execute([$ticket_number, $title, $description, $category_id, $subcategory_id, 
+                          $location_id, $priority, $user_id, $department_id]);
             
-            $ai_analysis = "Auto-categorized based on user selection. Priority set to: $priority";
+            $ticket_id = $pdo->lastInsertId();
             
-            if ($stmt->execute([$ticket_number, $title, $description, $category_id, $priority, 
-                              $user_id, $department_id, $ai_analysis])) {
-                
-                $ticket_id = $pdo->lastInsertId();
-                
-                // Handle file uploads
-                if (!empty($_FILES['attachments']['name'][0])) {
-                    $upload_dir = '../uploads/tickets/';
-                    if (!is_dir($upload_dir)) {
-                        mkdir($upload_dir, 0755, true);
-                    }
+            // Handle file uploads for different types
+            $upload_errors = [];
+            $upload_dir = '../uploads/tickets/';
+            
+            if (!is_dir($upload_dir)) {
+                mkdir($upload_dir, 0755, true);
+            }
+            
+            // Process each attachment type
+            $attachment_types = ['images', 'videos', 'documents'];
+            
+            foreach ($attachment_types as $type) {
+                if (isset($_FILES[$type]) && !empty($_FILES[$type]['name'][0])) {
+                    $files = $_FILES[$type];
+                    $file_count = count($files['name']);
                     
-                    foreach ($_FILES['attachments']['tmp_name'] as $key => $tmp_name) {
-                        if ($_FILES['attachments']['error'][$key] == 0) {
-                            try {
-                                $file_info = [
-                                    'name' => $_FILES['attachments']['name'][$key],
-                                    'tmp_name' => $tmp_name,
-                                    'size' => $_FILES['attachments']['size'][$key],
-                                    'error' => $_FILES['attachments']['error'][$key]
-                                ];
-                                
-                                $upload_result = uploadFile($file_info, $upload_dir);
-                                
-                                // Save to database
+                    for ($i = 0; $i < $file_count; $i++) {
+                        if ($files['error'][$i] == UPLOAD_ERR_OK) {
+                            $file_name = $files['name'][$i];
+                            $file_tmp = $files['tmp_name'][$i];
+                            $file_size = $files['size'][$i];
+                            $file_type = $files['type'][$i];
+                            
+                            // Validate file size (100MB limit)
+                            if ($file_size > 104857600) {
+                                $upload_errors[] = "File $file_name exceeds 100MB limit";
+                                continue;
+                            }
+                            
+                            // Generate unique filename
+                            $file_extension = pathinfo($file_name, PATHINFO_EXTENSION);
+                            $unique_filename = uniqid() . '_' . bin2hex(random_bytes(8)) . '.' . $file_extension;
+                            $file_path = $upload_dir . $unique_filename;
+                            
+                            if (move_uploaded_file($file_tmp, $file_path)) {
+                                // Insert attachment record
+                                $attachment_type = ($type == 'images') ? 'image' : (($type == 'videos') ? 'video' : 'document');
                                 $stmt = $pdo->prepare("
-                                    INSERT INTO ticket_attachments 
-                                    (ticket_id, filename, original_filename, file_path, file_size, mime_type, uploaded_by) 
-                                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                                    INSERT INTO ticket_attachments (ticket_id, file_name, original_name, file_path, 
+                                                                   file_size, file_type, attachment_type, uploaded_by) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                                 ");
-                                $stmt->execute([
-                                    $ticket_id,
-                                    $upload_result['filename'],
-                                    $upload_result['original_filename'],
-                                    $upload_result['file_path'],
-                                    $upload_result['file_size'],
-                                    $upload_result['mime_type'],
-                                    $user_id
-                                ]);
-                            } catch (Exception $e) {
-                                // Continue even if file upload fails
+                                $stmt->execute([$ticket_id, $unique_filename, $file_name, $file_path, 
+                                              $file_size, $file_type, $attachment_type, $user_id]);
+                            } else {
+                                $upload_errors[] = "Failed to upload $file_name";
                             }
                         }
                     }
                 }
-                
-                // Send notification to department staff
-                $stmt = $pdo->prepare("
-                    SELECT id FROM users 
-                    WHERE department_id = ? AND role IN ('staff', 'department_admin') AND is_active = 1
-                ");
-                $stmt->execute([$department_id]);
-                $staff_members = $stmt->fetchAll();
-                
-                foreach ($staff_members as $staff) {
-                    sendNotification($pdo, $staff['id'], $ticket_id, 
-                                   'New Ticket Assigned', 
-                                   "A new ticket #{$ticket_number} has been submitted: {$title}",
-                                   'ticket_created');
-                }
-                
-                $success = "Ticket #{$ticket_number} has been created successfully!";
-                
-                // Clear form
-                $_POST = [];
-            } else {
-                $error = 'Failed to create ticket. Please try again.';
             }
+            
+            $success = "Ticket created successfully! Ticket Number: $ticket_number";
+            
+            // Clear form data on success
+            $_POST = [];
+            
         } catch (PDOException $e) {
-            $error = 'Failed to create ticket. Please try again.';
+            $error = "Error creating ticket: " . $e->getMessage();
         }
+    } else {
+        $error = "Please fill in all required fields.";
     }
 }
 ?>
@@ -144,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Ticket - ServiceLink</title>
+    <title>Create Service Request - ServiceLink</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="../assets/css/style.css" rel="stylesheet">
@@ -161,284 +170,419 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">
                         <i class="fas fa-plus text-success me-2"></i>
-                        Create New Ticket
+                        Create Service Request
                     </h1>
                     <div class="btn-toolbar mb-2 mb-md-0">
-                        <a href="index.php" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i>
-                            Back to Tickets
-                        </a>
+                        <div class="btn-group me-2">
+                            <a href="../student/tickets.php" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Back to My Requests
+                            </a>
+                        </div>
                     </div>
                 </div>
 
-                <?php if ($error): ?>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle me-2"></i>
-                        <?php echo htmlspecialchars($error); ?>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if ($success): ?>
-                    <div class="alert alert-success">
+                <?php if (isset($success)): ?>
+                    <div class="alert alert-success alert-dismissible fade show">
                         <i class="fas fa-check-circle me-2"></i>
                         <?php echo htmlspecialchars($success); ?>
-                        <div class="mt-2">
-                            <a href="index.php" class="btn btn-success btn-sm">View My Tickets</a>
-                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (isset($error)): ?>
+                    <div class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <?php echo htmlspecialchars($error); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($upload_errors)): ?>
+                    <div class="alert alert-warning alert-dismissible fade show">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Upload Issues:</strong>
+                        <ul class="mb-0 mt-2">
+                            <?php foreach ($upload_errors as $upload_error): ?>
+                                <li><?php echo htmlspecialchars($upload_error); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
                 <?php endif; ?>
 
                 <!-- Create Ticket Form -->
-                <div class="row">
-                    <div class="col-lg-8">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-white border-0">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-edit text-success me-2"></i>
-                                    Ticket Details
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                <form method="POST" enctype="multipart/form-data">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <form method="POST" enctype="multipart/form-data" id="ticketForm">
+                            <div class="row">
+                                <div class="col-md-8">
                                     <div class="mb-3">
-                                        <label for="title" class="form-label">Title *</label>
+                                        <label for="title" class="form-label">Request Title <span class="text-danger">*</span></label>
                                         <input type="text" class="form-control" id="title" name="title" 
                                                value="<?php echo htmlspecialchars($_POST['title'] ?? ''); ?>" 
                                                placeholder="Brief description of your request" required>
-                                        <div class="form-text">Provide a clear, concise title for your request</div>
-                                    </div>
-                                    
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="category_id" class="form-label">Service Category *</label>
-                                            <select class="form-select" id="category_id" name="category_id" required>
-                                                <option value="">Select a category</option>
-                                                <?php 
-                                                $current_dept = '';
-                                                foreach ($categories as $category): 
-                                                    // Group by department
-                                                    $dept_name = '';
-                                                    foreach ($departments as $dept) {
-                                                        if ($dept['id'] == $category['department_id']) {
-                                                            $dept_name = $dept['name'];
-                                                            break;
-                                                        }
-                                                    }
-                                                    
-                                                    if ($dept_name != $current_dept) {
-                                                        if ($current_dept != '') echo '</optgroup>';
-                                                        echo '<optgroup label="' . htmlspecialchars($dept_name) . '">';
-                                                        $current_dept = $dept_name;
-                                                    }
-                                                ?>
-                                                    <option value="<?php echo $category['id']; ?>" 
-                                                            <?php echo (($_POST['category_id'] ?? '') == $category['id']) ? 'selected' : ''; ?>>
-                                                        <?php echo htmlspecialchars($category['name']); ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                                <?php if ($current_dept != '') echo '</optgroup>'; ?>
-                                            </select>
-                                        </div>
-                                        
-                                        <div class="col-md-6 mb-3">
-                                            <label for="urgency" class="form-label">Urgency Level *</label>
-                                            <select class="form-select" id="urgency" name="urgency" required>
-                                                <option value="low" <?php echo (($_POST['urgency'] ?? 'medium') == 'low') ? 'selected' : ''; ?>>
-                                                    Low - Can wait a few days
-                                                </option>
-                                                <option value="medium" <?php echo (($_POST['urgency'] ?? 'medium') == 'medium') ? 'selected' : ''; ?>>
-                                                    Medium - Normal priority
-                                                </option>
-                                                <option value="high" <?php echo (($_POST['urgency'] ?? 'medium') == 'high') ? 'selected' : ''; ?>>
-                                                    High - Needs attention soon
-                                                </option>
-                                                <option value="urgent" <?php echo (($_POST['urgency'] ?? 'medium') == 'urgent') ? 'selected' : ''; ?>>
-                                                    Urgent - Critical issue
-                                                </option>
-                                            </select>
-                                        </div>
                                     </div>
                                     
                                     <div class="mb-3">
-                                        <label for="description" class="form-label">Description *</label>
-                                        <textarea class="form-control" id="description" name="description" rows="6" 
+                                        <label for="description" class="form-label">Detailed Description <span class="text-danger">*</span></label>
+                                        <textarea class="form-control" id="description" name="description" rows="5" 
                                                   placeholder="Please provide detailed information about your request..." required><?php echo htmlspecialchars($_POST['description'] ?? ''); ?></textarea>
-                                        <div class="form-text">
-                                            Include as much detail as possible: what happened, when it occurred, 
-                                            steps you've already taken, error messages, etc.
-                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="department_id" class="form-label">Department</label>
+                                        <select class="form-select" id="department_id" name="department_id" required>
+                                            <option value="">Select Department</option>
+                                            <?php foreach ($departments as $dept): ?>
+                                                <option value="<?php echo $dept['id']; ?>" 
+                                                        <?php echo (($_POST['department_id'] ?? '') == $dept['id']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($dept['name']); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
                                     </div>
                                     
-                                    <div class="mb-4">
-                                        <label for="attachments" class="form-label">Attachments (Optional)</label>
-                                        <input type="file" class="form-control" id="attachments" name="attachments[]" 
-                                               multiple accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.txt">
-                                        <div class="form-text">
-                                            You can upload screenshots, documents, or other relevant files. 
-                                            Max 10MB per file. Allowed: JPG, PNG, PDF, DOC, DOCX, TXT
-                                        </div>
+                                    <div class="mb-3">
+                                        <label for="category_id" class="form-label">Category</label>
+                                        <select class="form-select" id="category_id" name="category_id">
+                                            <option value="">Select Category</option>
+                                        </select>
                                     </div>
                                     
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-success">
-                                            <i class="fas fa-paper-plane me-1"></i>
-                                            Submit Ticket
-                                        </button>
-                                        <a href="index.php" class="btn btn-outline-secondary">
-                                            <i class="fas fa-times me-1"></i>
-                                            Cancel
-                                        </a>
+                                    <div class="mb-3">
+                                        <label for="subcategory_id" class="form-label">Subcategory</label>
+                                        <select class="form-select" id="subcategory_id" name="subcategory_id">
+                                            <option value="">Select Subcategory</option>
+                                        </select>
                                     </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Help Sidebar -->
-                    <div class="col-lg-4">
-                        <div class="card border-0 shadow-sm">
-                            <div class="card-header bg-success text-white">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-question-circle me-2"></i>
-                                    Need Help?
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <h6 class="fw-bold">Tips for Better Support:</h6>
-                                <ul class="list-unstyled">
-                                    <li class="mb-2">
-                                        <i class="fas fa-check text-success me-2"></i>
-                                        Be specific in your title
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="fas fa-check text-success me-2"></i>
-                                        Include error messages
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="fas fa-check text-success me-2"></i>
-                                        Attach relevant screenshots
-                                    </li>
-                                    <li class="mb-2">
-                                        <i class="fas fa-check text-success me-2"></i>
-                                        Mention steps you've tried
-                                    </li>
-                                </ul>
-                                
-                                <hr>
-                                
-                                <h6 class="fw-bold">What We Don't Handle:</h6>
-                                <ul class="list-unstyled text-muted small">
-                                    <li class="mb-1">• Grade-related issues</li>
-                                    <li class="mb-1">• Payment/billing concerns</li>
-                                    <li class="mb-1">• Official document requests</li>
-                                </ul>
-                                <p class="small text-muted">
-                                    These are handled by Registrar, Accounting, and Academic Affairs respectively.
-                                </p>
-                                
-                                <hr>
-                                
-                                <div class="text-center">
-                                    <a href="../contact.php" class="btn btn-outline-success btn-sm">
-                                        <i class="fas fa-envelope me-1"></i>
-                                        Contact Support
-                                    </a>
+                                    
+                                    <div class="mb-3">
+                                        <label for="location_id" class="form-label">Location</label>
+                                        <select class="form-select" id="location_id" name="location_id">
+                                            <option value="">Select Location</option>
+                                            <?php foreach ($locations as $location): ?>
+                                                <option value="<?php echo $location['id']; ?>" 
+                                                        <?php echo (($_POST['location_id'] ?? '') == $location['id']) ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($location['name']); ?>
+                                                    <?php if ($location['building']): ?>
+                                                        - <?php echo htmlspecialchars($location['building']); ?>
+                                                    <?php endif; ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <!-- Recent Tickets -->
-                        <div class="card border-0 shadow-sm mt-4">
-                            <div class="card-header bg-white border-0">
-                                <h6 class="card-title mb-0">
-                                    <i class="fas fa-history me-2"></i>
-                                    Your Recent Tickets
-                                </h6>
-                            </div>
-                            <div class="card-body">
-                                <?php
-                                try {
-                                    $stmt = $pdo->prepare("
-                                        SELECT ticket_number, title, status, created_at 
-                                        FROM tickets 
-                                        WHERE requester_id = ? 
-                                        ORDER BY created_at DESC 
-                                        LIMIT 3
-                                    ");
-                                    $stmt->execute([$user_id]);
-                                    $recent_tickets = $stmt->fetchAll();
-                                    
-                                    if ($recent_tickets):
-                                        foreach ($recent_tickets as $ticket):
-                                ?>
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div>
-                                            <div class="fw-bold small"><?php echo htmlspecialchars($ticket['ticket_number']); ?></div>
-                                            <div class="text-muted small">
-                                                <?php echo htmlspecialchars(substr($ticket['title'], 0, 30)); ?>...
-                                            </div>
-                                        </div>
-                                        <span class="badge bg-<?php echo getStatusColor($ticket['status']); ?> small">
-                                            <?php echo ucfirst($ticket['status']); ?>
-                                        </span>
+                            
+                            <!-- File Attachments -->
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-paperclip text-success me-2"></i>
+                                        Attachments (Optional)
+                                    </h5>
+                                    <p class="text-muted small">Maximum file size: 100MB per file</p>
+                                </div>
+                                
+                                <!-- Images -->
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-image text-success me-1"></i>
+                                        Images
+                                    </label>
+                                    <div id="image-uploads">
+                                        <input type="file" class="form-control mb-2" name="images[]" accept="image/*" multiple>
                                     </div>
-                                <?php 
-                                        endforeach;
-                                    else:
-                                ?>
-                                    <p class="text-muted small mb-0">No previous tickets</p>
-                                <?php 
-                                    endif;
-                                } catch (PDOException $e) {
-                                    echo '<p class="text-muted small mb-0">Unable to load recent tickets</p>';
-                                }
-                                ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="addFileInput('image-uploads', 'images[]', 'image/*')">
+                                        <i class="fas fa-plus me-1"></i>Add More
+                                    </button>
+                                </div>
+                                
+                                <!-- Videos -->
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-video text-success me-1"></i>
+                                        Videos
+                                    </label>
+                                    <div id="video-uploads">
+                                        <input type="file" class="form-control mb-2" name="videos[]" accept="video/*" multiple>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="addFileInput('video-uploads', 'videos[]', 'video/*')">
+                                        <i class="fas fa-plus me-1"></i>Add More
+                                    </button>
+                                </div>
+                                
+                                <!-- Documents -->
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label">
+                                        <i class="fas fa-file text-success me-1"></i>
+                                        Documents
+                                    </label>
+                                    <div id="document-uploads">
+                                        <input type="file" class="form-control mb-2" name="documents[]" accept=".pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx" multiple>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="addFileInput('document-uploads', 'documents[]', '.pdf,.doc,.docx,.txt,.xls,.xlsx,.ppt,.pptx')">
+                                        <i class="fas fa-plus me-1"></i>Add More
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                            
+                            <!-- Form Actions -->
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                <div>
+                                    <button type="button" class="btn btn-outline-danger" onclick="clearForm()">
+                                        <i class="fas fa-trash me-1"></i>
+                                        Clear All
+                                    </button>
+                                </div>
+                                <div>
+                                    <button type="button" class="btn btn-outline-success me-2" onclick="previewTicket()">
+                                        <i class="fas fa-eye me-1"></i>
+                                        Preview
+                                    </button>
+                                    <button type="submit" class="btn btn-success">
+                                        <i class="fas fa-paper-plane me-1"></i>
+                                        Submit Request
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </main>
         </div>
     </div>
 
+    <!-- Preview Modal -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye text-success me-2"></i>
+                        Request Preview
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="previewContent">
+                    <!-- Preview content will be inserted here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-success" onclick="submitForm()">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        Submit Request
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Clear Confirmation Modal -->
+    <div class="modal fade" id="clearModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        Clear Form
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to clear all form data? This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmClear()">
+                        <i class="fas fa-trash me-1"></i>
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.dashboard-sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
+        // Load categories when department changes
+        document.getElementById('department_id').addEventListener('change', function() {
+            const departmentId = this.value;
+            const categorySelect = document.getElementById('category_id');
+            const subcategorySelect = document.getElementById('subcategory_id');
             
-            sidebar.classList.toggle('show');
-            overlay.classList.toggle('show');
-        }
-        
-        // File upload preview
-        document.getElementById('attachments').addEventListener('change', function(e) {
-            const files = e.target.files;
-            const maxSize = 10 * 1024 * 1024; // 10MB
+            // Clear existing options
+            categorySelect.innerHTML = '<option value="">Select Category</option>';
+            subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
             
-            for (let file of files) {
-                if (file.size > maxSize) {
-                    alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
-                    e.target.value = '';
-                    break;
-                }
+            if (departmentId) {
+                fetch(`../api/get_categories.php?department_id=${departmentId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category.id;
+                            option.textContent = category.name;
+                            categorySelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error loading categories:', error));
             }
         });
         
-        // Character counter for description
-        const description = document.getElementById('description');
-        const counter = document.createElement('div');
-        counter.className = 'form-text text-end';
-        description.parentNode.appendChild(counter);
+        // Load subcategories when category changes
+        document.getElementById('category_id').addEventListener('change', function() {
+            const categoryId = this.value;
+            const subcategorySelect = document.getElementById('subcategory_id');
+            
+            // Clear existing options
+            subcategorySelect.innerHTML = '<option value="">Select Subcategory</option>';
+            
+            if (categoryId) {
+                fetch(`../api/get_subcategories.php?category_id=${categoryId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(subcategory => {
+                            const option = document.createElement('option');
+                            option.value = subcategory.id;
+                            option.textContent = subcategory.name;
+                            subcategorySelect.appendChild(option);
+                        });
+                    })
+                    .catch(error => console.error('Error loading subcategories:', error));
+            }
+        });
         
-        function updateCounter() {
-            const length = description.value.length;
-            counter.textContent = `${length} characters`;
-            counter.className = length > 1000 ? 'form-text text-end text-warning' : 'form-text text-end';
+        // Add file input function
+        function addFileInput(containerId, inputName, accept) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+            div.innerHTML = `
+                <input type="file" class="form-control" name="${inputName}" accept="${accept}" multiple>
+                <button type="button" class="btn btn-outline-danger" onclick="removeFileInput(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            container.appendChild(div);
         }
         
-        description.addEventListener('input', updateCounter);
-        updateCounter();
+        // Remove file input function
+        function removeFileInput(button) {
+            button.parentElement.remove();
+        }
+        
+        // Clear form function
+        function clearForm() {
+            const modal = new bootstrap.Modal(document.getElementById('clearModal'));
+            modal.show();
+        }
+        
+        function confirmClear() {
+            document.getElementById('ticketForm').reset();
+            
+            // Clear additional file inputs
+            ['image-uploads', 'video-uploads', 'document-uploads'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                const inputs = container.querySelectorAll('.input-group');
+                inputs.forEach(input => input.remove());
+            });
+            
+            // Clear category and subcategory dropdowns
+            document.getElementById('category_id').innerHTML = '<option value="">Select Category</option>';
+            document.getElementById('subcategory_id').innerHTML = '<option value="">Select Subcategory</option>';
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('clearModal'));
+            modal.hide();
+        }
+        
+        // Preview function
+        function previewTicket() {
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const department = document.getElementById('department_id').selectedOptions[0]?.text || 'Not selected';
+            const category = document.getElementById('category_id').selectedOptions[0]?.text || 'Not selected';
+            const subcategory = document.getElementById('subcategory_id').selectedOptions[0]?.text || 'Not selected';
+            const location = document.getElementById('location_id').selectedOptions[0]?.text || 'Not selected';
+            
+            // Get file information
+            const imageFiles = Array.from(document.querySelectorAll('input[name="images[]"]')).flatMap(input => Array.from(input.files));
+            const videoFiles = Array.from(document.querySelectorAll('input[name="videos[]"]')).flatMap(input => Array.from(input.files));
+            const documentFiles = Array.from(document.querySelectorAll('input[name="documents[]"]')).flatMap(input => Array.from(input.files));
+            
+            let previewContent = `
+                <div class="mb-3">
+                    <h6>Title:</h6>
+                    <p>${title || 'Not provided'}</p>
+                </div>
+                <div class="mb-3">
+                    <h6>Description:</h6>
+                    <p>${description || 'Not provided'}</p>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Department:</h6>
+                        <p>${department}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Category:</h6>
+                        <p>${category}</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Subcategory:</h6>
+                        <p>${subcategory}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Location:</h6>
+                        <p>${location}</p>
+                    </div>
+                </div>
+            `;
+            
+            if (imageFiles.length > 0 || videoFiles.length > 0 || documentFiles.length > 0) {
+                previewContent += '<h6>Attachments:</h6>';
+                
+                if (imageFiles.length > 0) {
+                    previewContent += `<p><i class="fas fa-image text-success me-1"></i> Images: ${imageFiles.length} file(s)</p>`;
+                    imageFiles.forEach(file => {
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                const img = document.createElement('img');
+                                img.src = e.target.result;
+                                img.className = 'img-thumbnail me-2 mb-2';
+                                img.style.maxWidth = '100px';
+                                img.style.maxHeight = '100px';
+                                document.getElementById('previewContent').appendChild(img);
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
+                
+                if (videoFiles.length > 0) {
+                    previewContent += `<p><i class="fas fa-video text-success me-1"></i> Videos: ${videoFiles.length} file(s)</p>`;
+                }
+                
+                if (documentFiles.length > 0) {
+                    previewContent += `<p><i class="fas fa-file text-success me-1"></i> Documents: ${documentFiles.length} file(s)</p>`;
+                }
+            }
+            
+            document.getElementById('previewContent').innerHTML = previewContent;
+            
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            modal.show();
+        }
+        
+        function submitForm() {
+            document.getElementById('ticketForm').submit();
+        }
     </script>
 </body>
 </html>

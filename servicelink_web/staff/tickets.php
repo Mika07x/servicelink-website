@@ -179,6 +179,17 @@ $tickets = $stmt->fetchAll();
                 </div>
             </div>
 
+            <!-- Error Message Display -->
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php 
+                    echo htmlspecialchars($_SESSION['error_message']); 
+                    unset($_SESSION['error_message']);
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
             <!-- Filters -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
@@ -194,10 +205,14 @@ $tickets = $stmt->fetchAll();
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">All Status</option>
-                                <option value="open" <?php echo ($status_filter == 'open') ? 'selected' : ''; ?>>Open</option>
+                                <option value="new" <?php echo ($status_filter == 'new') ? 'selected' : ''; ?>>New</option>
+                                <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                <option value="assigned" <?php echo ($status_filter == 'assigned') ? 'selected' : ''; ?>>Assigned</option>
                                 <option value="in_progress" <?php echo ($status_filter == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
+                                <option value="on_hold" <?php echo ($status_filter == 'on_hold') ? 'selected' : ''; ?>>On Hold</option>
                                 <option value="resolved" <?php echo ($status_filter == 'resolved') ? 'selected' : ''; ?>>Resolved</option>
                                 <option value="closed" <?php echo ($status_filter == 'closed') ? 'selected' : ''; ?>>Closed</option>
+                                <option value="reopen" <?php echo ($status_filter == 'reopen') ? 'selected' : ''; ?>>Reopen</option>
                             </select>
                         </div>
                         
@@ -316,13 +331,13 @@ $tickets = $stmt->fetchAll();
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" 
+                                                    <a href="view.php?id=<?php echo $ticket['id']; ?>" 
                                                        class="btn btn-outline-success" title="View Details">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                     <?php if ($ticket['status'] != 'closed'): ?>
-                                                        <a href="../tickets/edit.php?id=<?php echo $ticket['id']; ?>" 
-                                                           class="btn btn-outline-primary" title="Edit">
+                                                        <a href="edit.php?id=<?php echo $ticket['id']; ?>" 
+                                                           class="btn btn-outline-success" title="Edit">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
                                                     <?php endif; ?>

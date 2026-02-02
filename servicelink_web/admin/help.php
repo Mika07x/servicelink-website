@@ -58,6 +58,22 @@ $user_role = $_SESSION['user_role'];
                     <div class="card border-0 shadow-sm h-100">
                         <div class="card-body text-center">
                             <div class="mb-3">
+                                <i class="fas fa-comments fa-3x text-info"></i>
+                            </div>
+                            <h5 class="card-title">Chat Support</h5>
+                            <p class="card-text">Manage real-time chat support with users and handle support tickets.</p>
+                            <a href="chat-support.php" class="btn btn-info">
+                                <i class="fas fa-comments me-1"></i>
+                                Chat Support Center
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
                                 <i class="fas fa-building fa-3x text-success"></i>
                             </div>
                             <h5 class="card-title">Department Management</h5>

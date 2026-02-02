@@ -61,10 +61,15 @@ try {
     $stmt = $pdo->prepare("
         SELECT 
             COUNT(*) as total_tickets,
-            SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+            SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_tickets,
+            SUM(CASE WHEN status IN ('new', 'pending') THEN 1 ELSE 0 END) as open_tickets,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tickets,
+            SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned_tickets,
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+            SUM(CASE WHEN status = 'on_hold' THEN 1 ELSE 0 END) as on_hold_tickets,
             SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
             SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets,
+            SUM(CASE WHEN status = 'reopen' THEN 1 ELSE 0 END) as reopen_tickets,
             SUM(CASE WHEN priority = 'emergency' THEN 1 ELSE 0 END) as emergency_tickets,
             SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) as high_priority_tickets,
             AVG(CASE WHEN resolved_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, created_at, resolved_at) END) as avg_resolution_time
@@ -109,7 +114,7 @@ try {
         FROM tickets t
         $where_clause
         GROUP BY status
-        ORDER BY FIELD(status, 'open', 'in_progress', 'resolved', 'closed', 'cancelled')
+        ORDER BY FIELD(status, 'new', 'pending', 'assigned', 'in_progress', 'on_hold', 'resolved', 'closed', 'reopen')
     ");
     $stmt->execute($params);
     $report_data['by_status'] = $stmt->fetchAll();
@@ -141,9 +146,9 @@ try {
     
 } catch (PDOException $e) {
     $report_data = [
-        'overview' => ['total_tickets' => 0, 'open_tickets' => 0, 'in_progress_tickets' => 0, 
-                      'resolved_tickets' => 0, 'closed_tickets' => 0, 'emergency_tickets' => 0,
-                      'high_priority_tickets' => 0, 'avg_resolution_time' => 0],
+        'overview' => ['total_tickets' => 0, 'new_tickets' => 0, 'open_tickets' => 0, 'pending_tickets' => 0, 'assigned_tickets' => 0,
+                      'in_progress_tickets' => 0, 'on_hold_tickets' => 0, 'resolved_tickets' => 0, 'closed_tickets' => 0, 
+                      'reopen_tickets' => 0, 'emergency_tickets' => 0, 'high_priority_tickets' => 0, 'avg_resolution_time' => 0],
         'by_department' => [],
         'by_priority' => [],
         'by_status' => [],
@@ -240,10 +245,14 @@ if ($user_role == 'admin') {
                                 <label for="status" class="form-label">Status</label>
                                 <select class="form-select" id="status" name="status">
                                     <option value="">All Status</option>
-                                    <option value="open" <?php echo ($status_filter == 'open') ? 'selected' : ''; ?>>Open</option>
+                                    <option value="new" <?php echo ($status_filter == 'new') ? 'selected' : ''; ?>>New</option>
+                                    <option value="pending" <?php echo ($status_filter == 'pending') ? 'selected' : ''; ?>>Pending</option>
+                                    <option value="assigned" <?php echo ($status_filter == 'assigned') ? 'selected' : ''; ?>>Assigned</option>
                                     <option value="in_progress" <?php echo ($status_filter == 'in_progress') ? 'selected' : ''; ?>>In Progress</option>
+                                    <option value="on_hold" <?php echo ($status_filter == 'on_hold') ? 'selected' : ''; ?>>On Hold</option>
                                     <option value="resolved" <?php echo ($status_filter == 'resolved') ? 'selected' : ''; ?>>Resolved</option>
                                     <option value="closed" <?php echo ($status_filter == 'closed') ? 'selected' : ''; ?>>Closed</option>
+                                    <option value="reopen" <?php echo ($status_filter == 'reopen') ? 'selected' : ''; ?>>Reopen</option>
                                 </select>
                             </div>
                             
@@ -282,16 +291,24 @@ if ($user_role == 'admin') {
                                     </div>
                                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                                         <div class="text-center">
-                                            <div class="h3 text-warning mb-1">
-                                                <?php echo number_format($report_data['overview']['open_tickets']); ?>
+                                            <div class="h3 text-info mb-1">
+                                                <?php echo number_format($report_data['overview']['new_tickets'] ?? 0); ?>
                                             </div>
-                                            <div class="small text-muted">Open</div>
+                                            <div class="small text-muted">New</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                                        <div class="text-center">
+                                            <div class="h3 text-warning mb-1">
+                                                <?php echo number_format($report_data['overview']['pending_tickets'] ?? 0); ?>
+                                            </div>
+                                            <div class="small text-muted">Pending</div>
                                         </div>
                                     </div>
                                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                                         <div class="text-center">
                                             <div class="h3 text-info mb-1">
-                                                <?php echo number_format($report_data['overview']['in_progress_tickets']); ?>
+                                                <?php echo number_format($report_data['overview']['in_progress_tickets'] ?? 0); ?>
                                             </div>
                                             <div class="small text-muted">In Progress</div>
                                         </div>
@@ -299,17 +316,9 @@ if ($user_role == 'admin') {
                                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                                         <div class="text-center">
                                             <div class="h3 text-success mb-1">
-                                                <?php echo number_format($report_data['overview']['resolved_tickets']); ?>
+                                                <?php echo number_format($report_data['overview']['resolved_tickets'] ?? 0); ?>
                                             </div>
                                             <div class="small text-muted">Resolved</div>
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-                                        <div class="text-center">
-                                            <div class="h3 text-danger mb-1">
-                                                <?php echo number_format($report_data['overview']['emergency_tickets']); ?>
-                                            </div>
-                                            <div class="small text-muted">Emergency</div>
                                         </div>
                                     </div>
                                     <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
@@ -464,7 +473,7 @@ if ($user_role == 'admin') {
                 labels: [<?php echo "'" . implode("','", array_map(function($item) { return ucfirst(str_replace('_', ' ', $item['status'])); }, $report_data['by_status'])) . "'"; ?>],
                 datasets: [{
                     data: [<?php echo implode(',', array_column($report_data['by_status'], 'count')); ?>],
-                    backgroundColor: ['#ffc107', '#17a2b8', '#28a745', '#6c757d', '#dc3545']
+                    backgroundColor: ['#17a2b8', '#ffc107', '#6c757d', '#17a2b8', '#fd7e14', '#28a745', '#6c757d', '#dc3545']
                 }]
             },
             options: {

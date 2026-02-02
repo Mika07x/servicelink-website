@@ -192,6 +192,17 @@ $tickets = $stmt->fetchAll();
                 </div>
             </div>
 
+            <!-- Error Message Display -->
+            <?php if (isset($_SESSION['error_message'])): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php 
+                    echo htmlspecialchars($_SESSION['error_message']); 
+                    unset($_SESSION['error_message']);
+                    ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
+
             <!-- Filters -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body">
@@ -331,13 +342,13 @@ $tickets = $stmt->fetchAll();
                                             </td>
                                             <td>
                                                 <div class="btn-group btn-group-sm">
-                                                    <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" 
+                                                    <a href="view.php?id=<?php echo $ticket['id']; ?>" 
                                                        class="btn btn-outline-success" title="View Details">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                     <?php if ($ticket['status'] != 'closed'): ?>
-                                                        <a href="../tickets/edit.php?id=<?php echo $ticket['id']; ?>" 
-                                                           class="btn btn-outline-primary" title="Edit">
+                                                        <a href="edit.php?id=<?php echo $ticket['id']; ?>" 
+                                                           class="btn btn-outline-success" title="Edit">
                                                             <i class="fas fa-edit"></i>
                                                         </a>
                                                     <?php endif; ?>
@@ -396,18 +407,15 @@ $tickets = $stmt->fetchAll();
                 document.body.style.opacity = '1';
             }, 50);
         });
-        
-        // Smooth navigation effect for links
-        document.querySelectorAll('a[href]').forEach(link => {
-            link.addEventListener('click', function(e) {
-                if (this.href && !this.href.includes('#') && !this.target) {
-                    e.preventDefault();
-                    document.body.style.opacity = '0.7';
-                    setTimeout(() => {
-                        window.location.href = this.href;
-                    }, 150);
-                }
-            });
+    <script>
+        // Smooth page transition effect
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.style.opacity = '0';
+            document.body.style.transition = 'opacity 0.3s ease-in-out';
+            
+            setTimeout(function() {
+                document.body.style.opacity = '1';
+            }, 50);
         });
     </script>
     <script>

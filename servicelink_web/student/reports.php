@@ -51,10 +51,15 @@ try {
     $stmt = $pdo->prepare("
         SELECT 
             COUNT(*) as total_tickets,
-            SUM(CASE WHEN status = 'open' THEN 1 ELSE 0 END) as open_tickets,
+            SUM(CASE WHEN status = 'new' THEN 1 ELSE 0 END) as new_tickets,
+            SUM(CASE WHEN status IN ('new', 'pending') THEN 1 ELSE 0 END) as open_tickets,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_tickets,
+            SUM(CASE WHEN status = 'assigned' THEN 1 ELSE 0 END) as assigned_tickets,
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_tickets,
+            SUM(CASE WHEN status = 'on_hold' THEN 1 ELSE 0 END) as on_hold_tickets,
             SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved_tickets,
             SUM(CASE WHEN status = 'closed' THEN 1 ELSE 0 END) as closed_tickets,
+            SUM(CASE WHEN status = 'reopen' THEN 1 ELSE 0 END) as reopen_tickets,
             SUM(CASE WHEN priority = 'emergency' THEN 1 ELSE 0 END) as emergency_tickets,
             SUM(CASE WHEN priority = 'high' THEN 1 ELSE 0 END) as high_priority_tickets,
             AVG(CASE WHEN resolved_at IS NOT NULL THEN TIMESTAMPDIFF(HOUR, created_at, resolved_at) END) as avg_resolution_time
@@ -119,7 +124,7 @@ try {
                             <i class="fas fa-print me-1"></i>
                             Print Report
                         </button>
-                        <button onclick="exportToCSV()" class="btn btn-outline-primary">
+                        <button onclick="exportToCSV()" class="btn btn-outline-success">
                             <i class="fas fa-download me-1"></i>
                             Export CSV
                         </button>
@@ -145,10 +150,14 @@ try {
                             <label for="status" class="form-label">Status</label>
                             <select class="form-select" id="status" name="status">
                                 <option value="">All Status</option>
-                                <option value="open" <?php echo $status_filter === 'open' ? 'selected' : ''; ?>>Open</option>
+                                <option value="new" <?php echo $status_filter === 'new' ? 'selected' : ''; ?>>New</option>
+                                <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                <option value="assigned" <?php echo $status_filter === 'assigned' ? 'selected' : ''; ?>>Assigned</option>
                                 <option value="in_progress" <?php echo $status_filter === 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                <option value="on_hold" <?php echo $status_filter === 'on_hold' ? 'selected' : ''; ?>>On Hold</option>
                                 <option value="resolved" <?php echo $status_filter === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
                                 <option value="closed" <?php echo $status_filter === 'closed' ? 'selected' : ''; ?>>Closed</option>
+                                <option value="reopen" <?php echo $status_filter === 'reopen' ? 'selected' : ''; ?>>Reopen</option>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -185,7 +194,7 @@ try {
                 <div class="col-md-3 mb-3">
                     <div class="card text-center">
                         <div class="card-body">
-                            <i class="fas fa-ticket-alt fa-2x text-primary mb-2"></i>
+                            <i class="fas fa-ticket-alt fa-2x text-success mb-2"></i>
                             <h4 class="mb-1"><?php echo $summary_stats['total_tickets'] ?? 0; ?></h4>
                             <p class="text-muted mb-0">Total Requests</p>
                         </div>

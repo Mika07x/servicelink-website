@@ -63,7 +63,7 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                     <?php
                     // Get assigned tickets count
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE assigned_to = ? AND status IN ('open', 'in_progress')");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE assigned_to = ? AND status IN ('assigned', 'in_progress')");
                         $stmt->execute([$_SESSION['user_id']]);
                         $count = $stmt->fetch()['count'];
                         if ($count > 0) echo '<span class="badge bg-info ms-2">' . $count . '</span>';
@@ -72,18 +72,18 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                 </a>
             </li>
 
-            <!-- Open Tickets -->
+            <!-- New Tickets -->
             <li class="nav-item">
-                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'open') ? 'active' : ''; ?>" href="tickets.php?status=open">
-                    <i class="fas fa-clock me-2"></i>
-                    Open Tickets
+                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'new') ? 'active' : ''; ?>" href="tickets.php?status=new">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    New Tickets
                     <?php
-                    // Get open tickets count for department
+                    // Get new tickets count for department
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND status = 'open'");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND status = 'new'");
                         $stmt->execute([$_SESSION['department_id']]);
                         $count = $stmt->fetch()['count'];
-                        if ($count > 0) echo '<span class="badge bg-warning ms-2">' . $count . '</span>';
+                        if ($count > 0) echo '<span class="badge bg-info ms-2">' . $count . '</span>';
                     } catch (PDOException $e) {}
                     ?>
                 </a>
@@ -97,7 +97,7 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                     <?php
                     // Get high priority tickets count for department
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'cancelled')");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE department_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'resolved')");
                         $stmt->execute([$_SESSION['department_id']]);
                         $count = $stmt->fetch()['count'];
                         if ($count > 0) echo '<span class="badge bg-danger ms-2">' . $count . '</span>';

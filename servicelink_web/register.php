@@ -20,6 +20,15 @@ try {
     $error = 'Failed to load departments.';
 }
 
+// Get campuses for dropdown
+$campuses = [];
+try {
+    $stmt = $pdo->query("SELECT id, name FROM campuses WHERE is_active = 1 ORDER BY name");
+    $campuses = $stmt->fetchAll();
+} catch (PDOException $e) {
+    $error = 'Failed to load campuses.';
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $student_number = trim($_POST['student_number']);
     $first_name = trim($_POST['first_name']);
@@ -27,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = trim($_POST['email']);
     $phone_number = trim($_POST['phone_number']);
     $department_id = $_POST['department_id'];
+    $campus_id = $_POST['campus_id'];
     $year_level = $_POST['year_level'];
     $password = $_POST['password'];
     $confirm_password = $_POST['confirm_password'];
@@ -34,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     // Validation
     if (empty($student_number) || empty($first_name) || empty($last_name) || 
         empty($email) || empty($phone_number) || empty($department_id) || 
-        empty($year_level) || empty($password) || empty($confirm_password)) {
+        empty($campus_id) || empty($year_level) || empty($password) || empty($confirm_password)) {
         $error = 'Please fill in all fields.';
     } elseif ($password !== $confirm_password) {
         $error = 'Passwords do not match.';
@@ -45,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     } else {
         try {
             // Check if email or student number already exists
-            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR student_number = ?");
+            $stmt = $pdo->prepare("SELECT id FROM users WHERE email = ? OR user_number = ?");
             $stmt->execute([$email, $student_number]);
             
             if ($stmt->fetch()) {
@@ -54,9 +64,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 // Create new user
                 $password_hash = password_hash($password, PASSWORD_DEFAULT);
                 
-                $stmt = $pdo->prepare("INSERT INTO users (student_number, first_name, last_name, email, phone_number, password_hash, department_id, year_level, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'user')");
+                $stmt = $pdo->prepare("INSERT INTO users (user_number, first_name, last_name, email, phone_number, password_hash, department_id, campus_id, year_level, role) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'user')");
                 
-                if ($stmt->execute([$student_number, $first_name, $last_name, $email, $phone_number, $password_hash, $department_id, $year_level])) {
+                if ($stmt->execute([$student_number, $first_name, $last_name, $email, $phone_number, $password_hash, $department_id, $campus_id, $year_level])) {
                     $success = 'Registration successful! You can now log in.';
                     
                     // Clear form data
@@ -137,7 +147,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
                             
                             <div class="mb-3">
-                                <label for="student_number" class="form-label">Student/Employee Number *</label>
+                                <label for="student_number" class="form-label">Student Number *</label>
                                 <input type="text" class="form-control" id="student_number" name="student_number" 
                                        value="<?php echo htmlspecialchars($_POST['student_number'] ?? ''); ?>" 
                                        placeholder="e.g., 2024-12345" required>
@@ -157,7 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
                             
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <label for="department_id" class="form-label">Department *</label>
                                     <select class="form-select" id="department_id" name="department_id" required>
                                         <option value="">Select Department</option>
@@ -170,7 +180,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                     </select>
                                 </div>
                                 
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
+                                    <label for="campus_id" class="form-label">Campus *</label>
+                                    <select class="form-select" id="campus_id" name="campus_id" required>
+                                        <option value="">Select Campus</option>
+                                        <?php foreach ($campuses as $campus): ?>
+                                            <option value="<?php echo $campus['id']; ?>" 
+                                                    <?php echo (($_POST['campus_id'] ?? '') == $campus['id']) ? 'selected' : ''; ?>>
+                                                <?php echo htmlspecialchars($campus['name']); ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
                                     <label for="year_level" class="form-label">Year Level *</label>
                                     <select class="form-select" id="year_level" name="year_level" required>
                                         <option value="">Select Year Level</option>
@@ -178,10 +201,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         <option value="2nd Year" <?php echo (($_POST['year_level'] ?? '') == '2nd Year') ? 'selected' : ''; ?>>2nd Year</option>
                                         <option value="3rd Year" <?php echo (($_POST['year_level'] ?? '') == '3rd Year') ? 'selected' : ''; ?>>3rd Year</option>
                                         <option value="4th Year" <?php echo (($_POST['year_level'] ?? '') == '4th Year') ? 'selected' : ''; ?>>4th Year</option>
-                                        <option value="5th Year" <?php echo (($_POST['year_level'] ?? '') == '5th Year') ? 'selected' : ''; ?>>5th Year</option>
-                                        <option value="Graduate" <?php echo (($_POST['year_level'] ?? '') == 'Graduate') ? 'selected' : ''; ?>>Graduate</option>
-                                        <option value="Faculty" <?php echo (($_POST['year_level'] ?? '') == 'Faculty') ? 'selected' : ''; ?>>Faculty</option>
-                                        <option value="Staff" <?php echo (($_POST['year_level'] ?? '') == 'Staff') ? 'selected' : ''; ?>>Staff</option>
                                     </select>
                                 </div>
                             </div>

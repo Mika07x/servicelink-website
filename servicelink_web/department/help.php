@@ -109,7 +109,7 @@ $user_role = $_SESSION['user_role'];
                             </div>
                             <h5 class="card-title">Department Tickets</h5>
                             <p class="card-text">View and manage all tickets assigned to your department.</p>
-                            <a href="../tickets/" class="btn btn-success">
+                            <a href="tickets.php" class="btn btn-success">
                                 <i class="fas fa-ticket-alt me-1"></i>
                                 View Tickets
                             </a>

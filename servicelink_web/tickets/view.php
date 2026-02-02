@@ -188,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                 <div class="col-lg-8 mb-4">
                     <div class="card shadow">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
+                            <h6 class="m-0 font-weight-bold text-success">
                                 <i class="fas fa-info-circle me-2"></i>
                                 Ticket Details
                             </h6>
@@ -248,7 +248,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                     <!-- Comments Section -->
                     <div class="card shadow mt-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
+                            <h6 class="m-0 font-weight-bold text-success">
                                 <i class="fas fa-comments me-2"></i>
                                 Comments & Updates
                             </h6>
@@ -292,7 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                                         </label>
                                     </div>
                                 <?php endif; ?>
-                                <button type="submit" class="btn btn-primary">
+                                <button type="submit" class="btn btn-success">
                                     <i class="fas fa-comment me-1"></i>
                                     Add Comment
                                 </button>
@@ -307,7 +307,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                         <!-- Status Update -->
                         <div class="card shadow mb-4">
                             <div class="card-header py-3">
-                                <h6 class="m-0 font-weight-bold text-primary">
+                                <h6 class="m-0 font-weight-bold text-success">
                                     <i class="fas fa-edit me-2"></i>
                                     Update Status
                                 </h6>
@@ -317,11 +317,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                                     <div class="mb-3">
                                         <label for="status" class="form-label">Status</label>
                                         <select class="form-select" id="status" name="status" required>
-                                            <option value="open" <?php echo $ticket['status'] == 'open' ? 'selected' : ''; ?>>Open</option>
+                                            <option value="new" <?php echo $ticket['status'] == 'new' ? 'selected' : ''; ?>>New</option>
+                                            <option value="pending" <?php echo $ticket['status'] == 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                            <option value="assigned" <?php echo $ticket['status'] == 'assigned' ? 'selected' : ''; ?>>Assigned</option>
                                             <option value="in_progress" <?php echo $ticket['status'] == 'in_progress' ? 'selected' : ''; ?>>In Progress</option>
+                                            <option value="on_hold" <?php echo $ticket['status'] == 'on_hold' ? 'selected' : ''; ?>>On Hold</option>
                                             <option value="resolved" <?php echo $ticket['status'] == 'resolved' ? 'selected' : ''; ?>>Resolved</option>
                                             <option value="closed" <?php echo $ticket['status'] == 'closed' ? 'selected' : ''; ?>>Closed</option>
-                                            <option value="cancelled" <?php echo $ticket['status'] == 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                            <option value="reopen" <?php echo $ticket['status'] == 'reopen' ? 'selected' : ''; ?>>Reopen</option>
                                         </select>
                                     </div>
                                     <div class="mb-3" id="resolution-field" style="display: none;">
@@ -340,7 +343,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                     <!-- Quick Actions -->
                     <div class="card shadow">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
+                            <h6 class="m-0 font-weight-bold text-success">
                                 <i class="fas fa-bolt me-2"></i>
                                 Quick Actions
                             </h6>
@@ -352,12 +355,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status']) && in
                                         <i class="fas fa-comments me-2"></i>
                                         Start Chat
                                     </a>
-                                    <a href="../student/tickets.php" class="btn btn-outline-primary">
+                                    <a href="../student/tickets.php" class="btn btn-outline-success">
                                         <i class="fas fa-list me-2"></i>
                                         My Requests
                                     </a>
                                 <?php else: ?>
-                                    <a href="index.php" class="btn btn-outline-primary">
+                                    <a href="index.php" class="btn btn-outline-success">
                                         <i class="fas fa-list me-2"></i>
                                         All Tickets
                                     </a>

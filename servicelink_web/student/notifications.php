@@ -166,7 +166,7 @@ try {
                                                 
                                                 <div>
                                                     <?php if ($notification['ticket_id']): ?>
-                                                        <a href="../tickets/index.php?id=<?php echo $notification['ticket_id']; ?>" 
+                                                        <a href="view.php?id=<?php echo $notification['ticket_id']; ?>" 
                                                            class="btn btn-sm btn-outline-success me-2">
                                                             <i class="fas fa-eye"></i>
                                                             View Ticket

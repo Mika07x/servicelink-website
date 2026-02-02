@@ -93,7 +93,7 @@ $user_role = $_SESSION['user_role'];
                             </div>
                             <h5 class="card-title">My Assignments</h5>
                             <p class="card-text">View and manage tickets assigned to you.</p>
-                            <a href="../tickets/?assigned=me" class="btn btn-info">
+                            <a href="tickets.php?assigned=me" class="btn btn-info">
                                 <i class="fas fa-tasks me-1"></i>
                                 View My Tickets
                             </a>
@@ -109,7 +109,7 @@ $user_role = $_SESSION['user_role'];
                             </div>
                             <h5 class="card-title">Pending Tickets</h5>
                             <p class="card-text">View unassigned tickets in your department.</p>
-                            <a href="../tickets/?status=open" class="btn btn-warning">
+                            <a href="tickets.php?status=pending" class="btn btn-warning">
                                 <i class="fas fa-clock me-1"></i>
                                 View Pending
                             </a>
@@ -125,7 +125,7 @@ $user_role = $_SESSION['user_role'];
                             </div>
                             <h5 class="card-title">High Priority</h5>
                             <p class="card-text">Handle urgent and high priority tickets.</p>
-                            <a href="../tickets/?priority=high,emergency" class="btn btn-danger">
+                            <a href="tickets.php?priority=high,emergency" class="btn btn-danger">
                                 <i class="fas fa-fire me-1"></i>
                                 View Urgent
                             </a>

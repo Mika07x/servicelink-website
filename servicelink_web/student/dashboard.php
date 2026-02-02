@@ -97,7 +97,7 @@ try {
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Requests</div>
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Requests</div>
                                     <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total_tickets'] ?? 0; ?></div>
                                 </div>
                                 <div class="col-auto">
@@ -163,11 +163,11 @@ try {
                 <div class="col-lg-8 mb-4">
                     <div class="card shadow">
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold text-primary">
+                            <h6 class="m-0 font-weight-bold text-success">
                                 <i class="fas fa-list me-2"></i>
                                 Recent Service Requests
                             </h6>
-                            <a href="../tickets/index.php" class="btn btn-sm btn-outline-primary">View All</a>
+                            <a href="tickets.php" class="btn btn-sm btn-outline-success">View All</a>
                         </div>
                         <div class="card-body">
                             <?php if (empty($recent_tickets)): ?>
@@ -220,7 +220,7 @@ try {
                                                     <small class="text-muted"><?php echo date('M j, Y', strtotime($ticket['created_at'])); ?></small>
                                                 </td>
                                                 <td>
-                                                    <a href="../tickets/view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-sm btn-outline-primary">
+                                                    <a href="view.php?id=<?php echo $ticket['id']; ?>" class="btn btn-sm btn-outline-success">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
                                                 </td>
@@ -239,7 +239,7 @@ try {
                     <!-- Quick Actions -->
                     <div class="card shadow mb-4">
                         <div class="card-header py-3">
-                            <h6 class="m-0 font-weight-bold text-primary">
+                            <h6 class="m-0 font-weight-bold text-success">
                                 <i class="fas fa-bolt me-2"></i>
                                 Quick Actions
                             </h6>
@@ -250,11 +250,11 @@ try {
                                     <i class="fas fa-plus me-2"></i>
                                     New Service Request
                                 </a>
-                                <a href="../tickets/index.php" class="btn btn-outline-primary">
+                                <a href="tickets.php" class="btn btn-outline-success">
                                     <i class="fas fa-list me-2"></i>
                                     View My Requests
                                 </a>
-                                <a href="reports.php" class="btn btn-outline-info">
+                                <a href="reports.php" class="btn btn-outline-success">
                                     <i class="fas fa-chart-bar me-2"></i>
                                     My Reports
                                 </a>
@@ -269,7 +269,7 @@ try {
                     <!-- Notifications -->
                     <div class="card shadow">
                         <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                            <h6 class="m-0 font-weight-bold text-primary">
+                            <h6 class="m-0 font-weight-bold text-success">
                                 <i class="fas fa-bell me-2"></i>
                                 Notifications
                             </h6>
@@ -283,7 +283,7 @@ try {
                                 <a href="notifications.php" class="btn btn-sm btn-success">View Notifications</a>
                             <?php else: ?>
                                 <p class="text-muted">No new notifications.</p>
-                                <a href="notifications.php" class="btn btn-sm btn-outline-primary">View All</a>
+                                <a href="notifications.php" class="btn btn-sm btn-outline-success">View All</a>
                             <?php endif; ?>
                         </div>
                     </div>

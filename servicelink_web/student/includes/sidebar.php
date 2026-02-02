@@ -67,16 +67,34 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                 </a>
             </li>
             
-            <!-- Open Requests -->
+            <!-- New Requests -->
             <li class="nav-item">
-                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'open') ? 'active' : ''; ?>" 
-                   href="tickets.php?status=open">
-                    <i class="fas fa-clock me-2"></i>
-                    Open Requests
+                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'new') ? 'active' : ''; ?>" 
+                   href="tickets.php?status=new">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    New Requests
                     <?php
-                    // Get open tickets count
+                    // Get new tickets count
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND status = 'open'");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND status = 'new'");
+                        $stmt->execute([$_SESSION['user_id']]);
+                        $count = $stmt->fetch()['count'];
+                        if ($count > 0) echo '<span class="badge bg-info ms-2">' . $count . '</span>';
+                    } catch (PDOException $e) {}
+                    ?>
+                </a>
+            </li>
+            
+            <!-- Pending -->
+            <li class="nav-item">
+                <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'pending') ? 'active' : ''; ?>" 
+                   href="tickets.php?status=pending">
+                    <i class="fas fa-clock me-2"></i>
+                    Pending
+                    <?php
+                    // Get pending tickets count
+                    try {
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND status = 'pending'");
                         $stmt->execute([$_SESSION['user_id']]);
                         $count = $stmt->fetch()['count'];
                         if ($count > 0) echo '<span class="badge bg-warning ms-2">' . $count . '</span>';
@@ -102,7 +120,7 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                     ?>
                 </a>
             </li>
-            
+
             <!-- Resolved -->
             <li class="nav-item">
                 <a class="nav-link <?php echo ($current_page == 'tickets.php' && isset($_GET['status']) && $_GET['status'] == 'resolved') ? 'active' : ''; ?>" 
@@ -131,7 +149,7 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                     <?php
                     // Get high priority tickets count
                     try {
-                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'cancelled')");
+                        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM tickets WHERE requester_id = ? AND priority IN ('high', 'emergency') AND status NOT IN ('closed', 'resolved')");
                         $stmt->execute([$_SESSION['user_id']]);
                         $count = $stmt->fetch()['count'];
                         if ($count > 0) echo '<span class="badge bg-danger ms-2">' . $count . '</span>';
@@ -223,7 +241,7 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
                     $stmt->execute([$_SESSION['user_id']]);
                     $today_tickets = $stmt->fetch()['total'];
                     
-                    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM tickets WHERE requester_id = ? AND status IN ('open', 'in_progress')");
+                    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM tickets WHERE requester_id = ? AND status IN ('new', 'pending', 'assigned', 'in_progress', 'on_hold', 'reopen')");
                     $stmt->execute([$_SESSION['user_id']]);
                     $active_tickets = $stmt->fetch()['total'];
                     
