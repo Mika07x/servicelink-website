@@ -109,6 +109,14 @@ $current_dir = basename(dirname($_SERVER['PHP_SELF']));
             <!-- Divider -->
             <hr class="my-3 text-white-50">
 
+            <!-- Chat Support -->
+            <li class="nav-item">
+                <a class="nav-link <?php echo ($current_page == 'chat-support.php') ? 'active' : ''; ?>" href="chat-support.php">
+                    <i class="fas fa-comments me-2"></i>
+                    Chat Support
+                </a>
+            </li>
+
             <!-- Reports -->
             <li class="nav-item">
                 <a class="nav-link <?php echo ($current_page == 'reports.php') ? 'active' : ''; ?>" href="reports.php">

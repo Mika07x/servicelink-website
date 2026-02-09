@@ -3,19 +3,20 @@ require_once '../config/session.php';
 require_once '../config/database.php';
 require_once '../includes/functions.php';
 
-// Check if user is admin
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'admin') {
+// Check if user is department admin
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] != 'department_admin') {
     header('Location: ../login.php');
     exit;
 }
 
 $user_id = $_SESSION['user_id'];
+$department_id = $_SESSION['department_id'];
 
-// Get all active tickets for chat selection
-$all_tickets = [];
+// Get department tickets for chat selection
+$department_tickets = [];
 
 try {
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT t.*, sc.name as category_name, d.name as department_name,
                CONCAT(requester.first_name, ' ', requester.last_name) as requester_name,
                CONCAT(staff.first_name, ' ', staff.last_name) as assigned_staff_name
@@ -24,13 +25,14 @@ try {
         LEFT JOIN departments d ON t.department_id = d.id
         LEFT JOIN users requester ON t.requester_id = requester.id
         LEFT JOIN users staff ON t.assigned_to = staff.id
-        WHERE t.status NOT IN ('closed', 'cancelled')
+        WHERE t.department_id = ? AND t.status NOT IN ('closed', 'cancelled')
         ORDER BY t.created_at DESC
-        LIMIT 30
+        LIMIT 20
     ");
-    $all_tickets = $stmt->fetchAll();
+    $stmt->execute([$department_id]);
+    $department_tickets = $stmt->fetchAll();
 } catch (PDOException $e) {
-    $all_tickets = [];
+    $department_tickets = [];
 }
 ?>
 <!DOCTYPE html>
@@ -38,18 +40,18 @@ try {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat Support - ServiceLink Admin</title>
+    <title>Chat Support - ServiceLink Department</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="../assets/css/style.css" rel="stylesheet">
 </head>
 <body>
-    <?php include '../includes/top_nav.php'; ?>
+    <?php include 'includes/top_nav.php'; ?>
     
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <?php include '../includes/sidebar.php'; ?>
+            <?php include 'includes/sidebar.php'; ?>
         
             <!-- Main Content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 dashboard-content">
@@ -61,23 +63,23 @@ try {
                     <div class="btn-toolbar mb-2 mb-md-0">
                         <a href="tickets.php" class="btn btn-outline-success">
                             <i class="fas fa-list me-1"></i>
-                            All Tickets
+                            Department Tickets
                         </a>
                     </div>
                 </div>
 
                 <div class="row">
-                    <!-- All Tickets for Chat -->
+                    <!-- Department Tickets for Chat -->
                     <div class="col-lg-8 mb-4">
-                        <?php if (!empty($all_tickets)): ?>
+                        <?php if (!empty($department_tickets)): ?>
                         <div class="card border-0 shadow-sm">
                             <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
                                 <h6 class="card-title mb-0">
                                     <i class="fas fa-ticket-alt text-success me-2"></i>
-                                    All Active Tickets - Start Chat
+                                    Department Tickets - Start Chat
                                 </h6>
                                 <small class="text-muted">
-                                    <?php echo count($all_tickets); ?> active tickets
+                                    <?php echo count($department_tickets); ?> active tickets
                                 </small>
                             </div>
                             <div class="card-body">
@@ -87,14 +89,14 @@ try {
                                             <tr>
                                                 <th>Ticket</th>
                                                 <th>Requester</th>
-                                                <th>Department</th>
                                                 <th>Assigned To</th>
                                                 <th>Status</th>
+                                                <th>Created</th>
                                                 <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <?php foreach ($all_tickets as $ticket): ?>
+                                            <?php foreach ($department_tickets as $ticket): ?>
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center">
@@ -111,9 +113,6 @@ try {
                                                     <small><?php echo htmlspecialchars($ticket['requester_name']); ?></small>
                                                 </td>
                                                 <td>
-                                                    <small><?php echo htmlspecialchars($ticket['department_name'] ?? 'N/A'); ?></small>
-                                                </td>
-                                                <td>
                                                     <?php if ($ticket['assigned_staff_name']): ?>
                                                         <small><?php echo htmlspecialchars($ticket['assigned_staff_name']); ?></small>
                                                     <?php else: ?>
@@ -124,6 +123,11 @@ try {
                                                     <span class="badge bg-<?php echo getStatusColor($ticket['status']); ?>">
                                                         <?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?>
                                                     </span>
+                                                </td>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        <?php echo date('M j, Y', strtotime($ticket['created_at'])); ?>
+                                                    </small>
                                                 </td>
                                                 <td>
                                                     <a href="chat.php?ticket_id=<?php echo $ticket['id']; ?>" class="btn btn-sm btn-outline-success">
@@ -143,7 +147,7 @@ try {
                             <div class="card-body text-center py-5">
                                 <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
                                 <h5 class="text-muted">No Active Tickets</h5>
-                                <p class="text-muted">There are no active tickets at the moment.</p>
+                                <p class="text-muted">Your department doesn't have any active tickets at the moment.</p>
                             </div>
                         </div>
                         <?php endif; ?>
@@ -156,7 +160,7 @@ try {
                             <div class="card-header bg-white border-0">
                                 <h6 class="card-title mb-0">
                                     <i class="fas fa-info-circle text-success me-2"></i>
-                                    Admin Chat Support
+                                    Chat Support Guide
                                 </h6>
                             </div>
                             <div class="card-body">
@@ -165,8 +169,8 @@ try {
                                         <span class="fw-bold text-success">1</span>
                                     </div>
                                     <div>
-                                        <h6 class="mb-1">Monitor All Tickets</h6>
-                                        <small class="text-muted">View tickets across all departments</small>
+                                        <h6 class="mb-1">Monitor Tickets</h6>
+                                        <small class="text-muted">View all department tickets</small>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-start mb-3">
@@ -175,7 +179,7 @@ try {
                                     </div>
                                     <div>
                                         <h6 class="mb-1">Communicate</h6>
-                                        <small class="text-muted">Chat with any user in the system</small>
+                                        <small class="text-muted">Chat with requesters and staff</small>
                                     </div>
                                 </div>
                                 <div class="d-flex align-items-start">
@@ -183,31 +187,34 @@ try {
                                         <span class="fw-bold text-warning">3</span>
                                     </div>
                                     <div>
-                                        <h6 class="mb-1">Oversee System</h6>
-                                        <small class="text-muted">Track overall system performance</small>
+                                        <h6 class="mb-1">Oversee Progress</h6>
+                                        <small class="text-muted">Track and manage ticket resolution</small>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- System Stats -->
+                        <!-- Department Stats -->
                         <div class="card border-0 shadow-sm">
                             <div class="card-header bg-white border-0">
                                 <h6 class="card-title mb-0">
                                     <i class="fas fa-chart-bar text-success me-2"></i>
-                                    System Statistics
+                                    Department Statistics
                                 </h6>
                             </div>
                             <div class="card-body">
                                 <?php
                                 try {
-                                    $stmt = $pdo->query("SELECT COUNT(*) as total FROM tickets");
+                                    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM tickets WHERE department_id = ?");
+                                    $stmt->execute([$department_id]);
                                     $total_tickets = $stmt->fetch()['total'];
                                     
-                                    $stmt = $pdo->query("SELECT COUNT(*) as total FROM tickets WHERE status = 'resolved'");
+                                    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM tickets WHERE department_id = ? AND status = 'resolved'");
+                                    $stmt->execute([$department_id]);
                                     $total_resolved = $stmt->fetch()['total'];
                                     
-                                    $stmt = $pdo->query("SELECT COUNT(*) as total FROM tickets WHERE status IN ('new', 'pending', 'assigned', 'in_progress')");
+                                    $stmt = $pdo->prepare("SELECT COUNT(*) as total FROM tickets WHERE department_id = ? AND status IN ('new', 'pending', 'assigned', 'in_progress')");
+                                    $stmt->execute([$department_id]);
                                     $total_active = $stmt->fetch()['total'];
                                 } catch (PDOException $e) {
                                     $total_tickets = 0;

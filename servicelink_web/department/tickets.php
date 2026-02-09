@@ -317,18 +317,11 @@ $tickets = $stmt->fetchAll();
                                                 </small>
                                             </td>
                                             <td>
-                                                <div class="btn-group btn-group-sm">
-                                                    <a href="view.php?id=<?php echo $ticket['id']; ?>" 
-                                                       class="btn btn-outline-success" title="View Details">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <?php if ($ticket['status'] != 'closed'): ?>
-                                                        <a href="edit.php?id=<?php echo $ticket['id']; ?>" 
-                                                           class="btn btn-outline-success" title="Edit">
-                                                            <i class="fas fa-edit"></i>
-                                                        </a>
-                                                    <?php endif; ?>
-                                                </div>
+                                                <a href="view.php?id=<?php echo $ticket['id']; ?>" 
+                                                   class="btn btn-sm btn-outline-success" title="View Details">
+                                                    <i class="fas fa-eye me-1"></i>
+                                                    View
+                                                </a>
                                             </td>
                                         </tr>
                                     <?php endforeach; ?>

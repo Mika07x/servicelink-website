@@ -294,6 +294,29 @@ if ($current_dir == 'admin' || $current_dir == 'department' || $current_dir == '
             <!-- Divider -->
             <hr class="my-3 text-white-50">
 
+            <!-- Chat Support -->
+            <?php if ($_SESSION['user_role'] != 'user'): ?>
+            <li class="nav-item">
+                <a class="nav-link <?php echo ($current_page == 'chat-support.php') ? 'active' : ''; ?>" 
+                   href="<?php 
+                   switch ($_SESSION['user_role']) {
+                       case 'admin':
+                           echo ($current_dir == 'admin') ? 'chat-support.php' : 'admin/chat-support.php';
+                           break;
+                       case 'department_admin':
+                           echo ($current_dir == 'department') ? 'chat-support.php' : 'department/chat-support.php';
+                           break;
+                       case 'staff':
+                           echo ($current_dir == 'staff') ? 'chat-support.php' : 'staff/chat-support.php';
+                           break;
+                   }
+                   ?>">
+                    <i class="fas fa-comments me-2"></i>
+                    Chat Support
+                </a>
+            </li>
+            <?php endif; ?>
+
             <!-- Reports Section -->
             <?php if ($_SESSION['user_role'] != 'user'): ?>
             <li class="nav-item">
